@@ -1,0 +1,149 @@
+﻿<Window
+    x:Class="FileTransporter.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:FileTransporter"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
+    x:Name="Window"
+    Title="FRP GUI - 端口转发"
+    Width="900"
+    Height="600"
+    ui:TitleBar.ButtonStyle="{DynamicResource AppTitleBarButtonStyle}"
+    ui:TitleBar.ExtendViewIntoTitleBar="True"
+    ui:TitleBar.Style="{DynamicResource AppTitleBarStyle}"
+    ui:WindowHelper.UseModernWindowStyle="True"
+    Closing="Window_Closing"
+    Loaded="Window_Loaded"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+    <Window.Resources>
+
+        <Style x:Key="AppTitleBarButtonStyle" TargetType="ui:TitleBarButton">
+            <Setter Property="IsActive" Value="{Binding IsActive, ElementName=Window}" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <Border Padding="12,0,144,0">
+            <Grid x:Name="AppTitleBar" Height="{Binding ElementName=Window, Path=(ui:TitleBar.Height)}">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="TextElement.Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsActive, ElementName=Window}" Value="False">
+                                <Setter Property="TextElement.Foreground" Value="{DynamicResource SystemControlDisabledBaseMediumLowBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="13"
+                    Text="{Binding ElementName=Window, Path=Title}" />
+                <ui:TitleBarButton
+                    Grid.Column="4"
+                    Width="NaN"
+                    Padding="16,0"
+                    FontSize="13"
+                    Foreground="{DynamicResource SystemControlBackgroundBaseMediumHighBrush}"
+                    Style="{StaticResource AppTitleBarButtonStyle}">
+                    <ui:TitleBarButton.Content>
+                        <ui:SymbolIcon Symbol="Setting" />
+                    </ui:TitleBarButton.Content>
+                    <ui:FlyoutService.Flyout>
+                        <ui:MenuFlyout Placement="Bottom">
+                            <MenuItem
+                                x:Name="menuStartup"
+                                Click="MenuStartup_Click"
+                                Header="开机自启"
+                                IsCheckable="True" />
+                            <MenuItem Click="MenuTray_Click" Header="最小化到托盘" />
+                        </ui:MenuFlyout>
+                    </ui:FlyoutService.Flyout>
+                </ui:TitleBarButton>
+            </Grid>
+        </Border>
+        <Grid Grid.Row="99">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button Click="Button_Click" Content="启动服务器" />
+            <Button Margin="0,202,0,0" Click="Button_Click2" Content="启动客户端" />
+
+            <GridSplitter
+                Grid.Column="1"
+                Width="8"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Stretch"
+                Background="Transparent" />
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ListBox
+                    x:Name="lbxLogs"
+                    Background="Transparent"
+                    DockPanel.Dock="Right"
+                    ItemsSource="{Binding Logs}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <ui:SimpleStackPanel Orientation="Vertical" Spacing="4">
+                                <TextBlock
+                                    Opacity="0.75"
+                                    Text="{Binding Time}"
+                                    TextWrapping="NoWrap" />
+                                <TextBlock
+                                    Foreground="{Binding TypeBrush}"
+                                    Text="{Binding Content}"
+                                    TextWrapping="Wrap" />
+                            </ui:SimpleStackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock
+                    Grid.Row="2"
+                    Margin="8,0,8,8"
+                    HorizontalAlignment="Right">
+                    <Run>共有</Run>
+                    <Run Text="{Binding Logs.Count, Mode=OneWay}" />
+                    <Run>条日志，</Run>
+                    <Hyperlink Click="Hyperlink_Click">点击清空</Hyperlink>
+                </TextBlock>
+            </Grid>
+
+            <ui:ContentDialog
+                x:Name="dialog"
+                Title="注意"
+                Grid.ColumnSpan="999"
+                CloseButtonText="确定">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="tbkDialogMessage" />
+                </Grid>
+            </ui:ContentDialog>
+        </Grid>
+    </Grid>
+</Window>
