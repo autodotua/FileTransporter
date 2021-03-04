@@ -1,15 +1,9 @@
-﻿/****************************************************
-	文件：PEPkg.cs
-	作者：Plane
-	邮箱: 1785275942@qq.com
-	日期：2018/10/30 11:20   	
-	功能：网络消息包
-*****************************************************/
+﻿using System;
 
-using System;
-
-namespace PENet {
-    class PEPkg {
+namespace FileTransporter.SimpleSocket
+{
+    internal class SimpleSocketPackage
+    {
         public int headLen = 4;
         public byte[] headBuff = null;
         public int headIndex = 0;
@@ -18,16 +12,19 @@ namespace PENet {
         public byte[] bodyBuff = null;
         public int bodyIndex = 0;
 
-        public PEPkg() {
+        public SimpleSocketPackage()
+        {
             headBuff = new byte[4];
         }
 
-        public void InitBodyBuff() {
+        public void InitBodyBuff()
+        {
             bodyLen = BitConverter.ToInt32(headBuff, 0);
             bodyBuff = new byte[bodyLen];
         }
 
-        public void ResetData() {
+        public void ResetData()
+        {
             headIndex = 0;
             bodyLen = 0;
             bodyBuff = null;

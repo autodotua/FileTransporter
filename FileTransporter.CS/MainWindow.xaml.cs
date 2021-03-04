@@ -1,7 +1,11 @@
-﻿using FileTransporter.Util;
+﻿using FileTransporter.Panels;
+using FileTransporter.SimpleSocket;
+using FileTransporter.Util;
+using FzLib.Extension;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,19 +24,55 @@ using System.Windows.Shapes;
 
 namespace FileTransporter
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+    public class MainWindowViewModel : INotifyPropertyChanged
+    {
+        public ObservableCollection<Log> Logs { get; } = new ObservableCollection<Log>();
+
+        private int maxLogCount = 10000;
+
+        public MainWindowViewModel()
+        {
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public int MaxLogCount
+        {
+            get => maxLogCount;
+            set
+            {
+                if (value > 100000)
+                {
+                    value = 100000;
+                }
+                else if (value < 10)
+                {
+                    value = 10;
+                }
+                this.SetValueAndNotify(ref maxLogCount, value, nameof(MaxLogCount));
+            }
+        }
+
+        private UserControl panel;
+
+        public UserControl Panel
+        {
+            get => panel;
+            set => this.SetValueAndNotify(ref panel, value, nameof(Panel));
+        }
+    }
+
     public partial class MainWindow : Window
     {
-        private Regex rLog = new Regex(@"(?<Time>[0-9/: ]{19}) \[(?<Type>.)\] \[[^\]]+\] (?<Content>.*)", RegexOptions.Compiled);
+        public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
 
         public MainWindow(bool autoStart = false)
         {
             bool clientOn = Config.Instance.ClientOn;
             bool serverOn = Config.Instance.ServerOn;
             InitializeComponent();
-            DataContext = this;
+            DataContext = ViewModel;
+            ViewModel.Panel = new LoginPanel();
 
             if (FzLib.Program.Startup.IsRegistryKeyExist() == FzLib.IO.ShortcutStatus.Exist)
             {
@@ -41,19 +81,49 @@ namespace FileTransporter
             if (autoStart)
             {
             }
+
+            SimpleSocketUtility.NewLog += SimpleSocketUtility_NewLog;
         }
 
-        public ObservableCollection<Log> Logs { get; } = new ObservableCollection<Log>();
+        private void SimpleSocketUtility_NewLog(object sender, SimpleSocketLogEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                Brush brush = e.Level switch
+                {
+                    LogLevel.Error => Brushes.Red,
+                    LogLevel.Info => Foreground,
+                    LogLevel.Warn => new SolidColorBrush(Color.FromArgb(0xFF, 0xDD, 0xDD, 0x00))
+                };
+                ViewModel.Logs.Add(new Log()
+                {
+                    Time = DateTime.Now,
+                    Content = e.Message + (e.Exception == null ? "" : $"（{e.Exception.Message}）"),
+                    TypeBrush = brush
+                });
+
+                if (ViewModel.Logs.Count > 0)
+                {
+                    lbxLogs.ScrollIntoView(ViewModel.Logs[^1]);
+                    while (ViewModel.Logs.Count > ViewModel.MaxLogCount)
+                    {
+                        ViewModel.Logs.RemoveAt(0);
+                    }
+                }
+            });
+        }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            (ViewModel.Panel as LoginPanel).WaitForClientOpenedAsync();
+            (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
         }
 
-        public async Task ShowMessage(string message)
+        public async Task ShowMessageAsync(string message)
         {
             tbkDialogMessage.Text = message;
             await dialog.ShowAsync();
@@ -81,25 +151,15 @@ namespace FileTransporter
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
-            Logs.Clear();
+            ViewModel.Logs.Clear();
         }
 
         private SocketHelper helper = new SocketHelper();
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            helper.StartServer();
-        }
-
-        private void Button_Click2(object sender, RoutedEventArgs e)
-        {
-            helper.StartClient();
-        }
     }
 
     public class Log
     {
-        public string Time { get; set; }
+        public DateTime Time { get; set; }
         public string Content { get; set; }
         public Brush TypeBrush { get; set; }
     }
