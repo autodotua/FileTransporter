@@ -115,8 +115,24 @@ namespace FileTransporter
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            (ViewModel.Panel as LoginPanel).WaitForClientOpenedAsync();
-            (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync();
+            bool ok = false;
+            (ViewModel.Panel as LoginPanel).WaitForClientOpenedAsync().ContinueWith(p =>
+            {
+                Debug.Assert(!ok);
+                ok = true;
+                Dispatcher.Invoke(() =>
+                {
+                    var panel = new ClientPanel(p.Result);
+                    ViewModel.Panel = panel;
+                });
+            });
+            (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync().ContinueWith(p =>
+            {
+                Debug.Assert(!ok);
+                //ok = true;
+                Dispatcher.Invoke(() =>
+                { });
+            });
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -153,8 +169,6 @@ namespace FileTransporter
         {
             ViewModel.Logs.Clear();
         }
-
-        private SocketHelper helper = new SocketHelper();
     }
 
     public class Log

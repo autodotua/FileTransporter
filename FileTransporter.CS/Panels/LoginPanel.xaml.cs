@@ -35,15 +35,15 @@ namespace FileTransporter.Panels
             DataContext = ViewModel;
         }
 
-        private TaskCompletionSource<SocketHelper> tcsServer = new TaskCompletionSource<SocketHelper>();
-        private TaskCompletionSource<SocketHelper> tcsClient = new TaskCompletionSource<SocketHelper>();
+        private TaskCompletionSource<ServerSocketHelper> tcsServer = new TaskCompletionSource<ServerSocketHelper>();
+        private TaskCompletionSource<ClientSocketHelper> tcsClient = new TaskCompletionSource<ClientSocketHelper>();
 
         public Task WaitForServerOpenedAsync()
         {
             return tcsServer.Task;
         }
 
-        public Task WaitForClientOpenedAsync()
+        public Task<ClientSocketHelper> WaitForClientOpenedAsync()
         {
             return tcsClient.Task;
         }
@@ -53,8 +53,8 @@ namespace FileTransporter.Panels
             (sender as Button).IsEnabled = false;
             try
             {
-                SocketHelper helper = new SocketHelper();
-                await helper.StartClientAsync(ViewModel.ClientConnectAddress, ViewModel.ClientPort, ViewModel.ClientPassword);
+                ClientSocketHelper helper = new ClientSocketHelper();
+                await helper.StartAsync(ViewModel.ClientConnectAddress, ViewModel.ClientPort, ViewModel.ClientPassword);
                 tcsClient.SetResult(helper);
             }
             catch (Exception ex)
@@ -69,8 +69,8 @@ namespace FileTransporter.Panels
             (sender as Button).IsEnabled = false;
             try
             {
-                SocketHelper helper = new SocketHelper();
-                helper.StartServer(ViewModel.ServerPort, ViewModel.ServerPassword);
+                ServerSocketHelper helper = new ServerSocketHelper();
+                helper.Start(ViewModel.ServerPort, ViewModel.ServerPassword);
                 tcsServer.SetResult(helper);
             }
             catch (Exception ex)
