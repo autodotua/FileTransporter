@@ -1,4 +1,6 @@
-﻿using System;
+﻿using FileTransporter.SimpleSocket;
+using log4net;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -13,6 +15,7 @@ namespace FileTransporter
     /// </summary>
     public partial class App : Application
     {
+        private static ILog log = LogManager.GetLogger(typeof(App));
         private TrayIcon tray;
 
         public void ShowTray()
@@ -34,6 +37,7 @@ namespace FileTransporter
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+            log.Info("程序启动");
 #if !DEBUG
             UnhandledException.RegistAll();
 
@@ -68,19 +72,53 @@ namespace FileTransporter
         {
             try
             {
-                System.Windows.MessageBox.Show("发生异常：" + Environment.NewLine + e.Exception.ToString());
-                File.AppendAllText("exceptions.log", Environment.NewLine + DateTime.Now.ToString() + Environment.NewLine + e.Exception.ToString() + Environment.NewLine);
+                Dispatcher.Invoke(() =>
+                {
+                    System.Windows.MessageBox.Show("发生异常：" + Environment.NewLine + e.Exception.ToString());
+                });
             }
             finally
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    Application.Current.Shutdown();
-                });
             }
+            try
+            {
+                log.Error("未捕获的异常", e.Exception);
+            }
+            catch
+            {
+            }
+            Dispatcher.Invoke(() =>
+            {
+                Shutdown();
+            });
         }
 
         public static string Name => "FileTransporter";
+
+        public static void Log(LogLevel level, string msg, Exception ex = null)
+        {
+            switch (level)
+            {
+                case LogLevel.Info:
+                    log.Info(msg, ex);
+                    break;
+
+                case LogLevel.Debug:
+                    log.Debug(msg, ex);
+                    break;
+
+                case LogLevel.Warn:
+                    log.Warn(msg, ex);
+                    break;
+
+                case LogLevel.Error:
+                    log.Error(msg, ex);
+                    break;
+            }
+            NewLog?.Invoke(null, new LogEventArgs(level, msg, ex));
+        }
+
+        public static event EventHandler<LogEventArgs> NewLog;
     }
 
     public static class UnhandledException

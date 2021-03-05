@@ -29,7 +29,7 @@ namespace FileTransporter.Panels
             InitializeComponent();
             DataContext = ViewModel;
 #if DEBUG
-            ViewModel.Files.Add(new TransporterFile(@"C:\Users\autod\Desktop\Road Rash 2002.zip"));
+            //ViewModel.Files.Add(new TransporterFile(@"C:\Users\autod\Desktop\Road Rash 2002.zip"));
 #endif
         }
 
@@ -60,19 +60,25 @@ namespace FileTransporter.Panels
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.Sending = true;
-            foreach (var file in ViewModel.Files.Where(p=>!p.Finished))
+            foreach (var file in ViewModel.Files.Where(p => !p.Finished))
             {
                 if (Socket is ClientSocketHelper cs)
                 {
                     await cs.SendFileAsync(file.File.FullName,
-                        (p, l) => file.UpdateProgress(p),
-                        () => ViewModel.Stopping);
+                        p =>
+                        {
+                            file.UpdateProgress(p.CurrentLength);
+                            p.Cancel = ViewModel.Stopping;
+                        });
                 }
                 else if (Socket is ServerSocketHelper ss)
                 {
                     await ss.SendFileAsync(Session, file.File.FullName,
-                        (p, l) => file.UpdateProgress(p),
-                        () => ViewModel.Stopping);
+                        p =>
+                        {
+                            file.UpdateProgress(p.CurrentLength);
+                            p.Cancel = ViewModel.Stopping;
+                        });
                 }
             }
             ViewModel.Sending = false;

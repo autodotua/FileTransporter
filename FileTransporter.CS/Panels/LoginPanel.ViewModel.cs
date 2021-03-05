@@ -7,5 +7,6 @@
         public string ClientConnectAddress { get; set; } = "54.223.221.55";// "autodotua.top";
         public string ServerPassword { get; set; }
         public string ClientPassword { get; set; }
+        public string ClientName { get; set; } = System.Environment.MachineName;
     }
 }

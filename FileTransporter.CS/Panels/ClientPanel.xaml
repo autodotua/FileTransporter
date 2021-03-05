@@ -10,7 +10,7 @@
     <TabControl Style="{StaticResource TabControlPivotStyle}">
         <TabItem Header="文件发送">
             <panels:SendFilePanel
-                x:Name="sfp" Margin="0,16,0,0"
+               Margin="0,16,0,0"
                 Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" />
         </TabItem>
         <TabItem Header="文件浏览" />

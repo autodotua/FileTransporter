@@ -10,21 +10,21 @@ namespace FileTransporter.FileSimpleSocket
 {
     public class ServerSocketHelper : SocketHelperBase
     {
-        private SimpleSocketServer<SocketData> server;
+        public SimpleSocketServer<SocketData> Server { get; private set; }
 
         public void Start(ushort port, string password)
         {
             Debug.Assert(!Started);
             Debug.Assert(!Closed);
             Debug.Assert(port > 0);
-            server = new SimpleSocketServer<SocketData>();
+            Server = new SimpleSocketServer<SocketData>();
             if (!string.IsNullOrEmpty(password))
             {
-                server.SetPassword(password);
+                Server.SetPassword(password);
             }
-            server.SetPassword(password);
-            server.Start("0.0.0.0", port);
-            server.ReceivedData += Server_ReceivedData;
+            Server.SetPassword(password);
+            Server.Start("0.0.0.0", port);
+            Server.ReceivedData += Server_ReceivedData;
             Started = true;
         }
 
@@ -49,15 +49,27 @@ namespace FileTransporter.FileSimpleSocket
             Send(session, resp);
         }
 
-        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<long, long> progress,
-            Func<bool> isCanceled = null)
+        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<TransportProgress> progress = null)
         {
-            return base.SendFileAsync(session, path, progress, isCanceled);
+            return base.SendFileAsync(session, path, progress);
         }
 
         private void Send(SimpleSocketSession<SocketData> session, SocketData data)
         {
             session.Send(data);
         }
+    }
+
+    public class TransportProgress
+    {
+        public TransportProgress(long totalLength, long currentLength)
+        {
+            TotalLength = totalLength;
+            CurrentLength = currentLength;
+        }
+
+        public long TotalLength { get; private set; }
+        public long CurrentLength { get; private set; }
+        public bool Cancel { get; set; }
     }
 }

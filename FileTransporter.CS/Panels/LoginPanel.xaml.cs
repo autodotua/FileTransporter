@@ -19,7 +19,7 @@ namespace FileTransporter.Panels
         private TaskCompletionSource<ServerSocketHelper> tcsServer = new TaskCompletionSource<ServerSocketHelper>();
         private TaskCompletionSource<ClientSocketHelper> tcsClient = new TaskCompletionSource<ClientSocketHelper>();
 
-        public Task WaitForServerOpenedAsync()
+        public Task<ServerSocketHelper> WaitForServerOpenedAsync()
         {
             return tcsServer.Task;
         }
@@ -35,7 +35,7 @@ namespace FileTransporter.Panels
             try
             {
                 ClientSocketHelper helper = new ClientSocketHelper();
-                await helper.StartAsync(ViewModel.ClientConnectAddress, ViewModel.ClientPort, ViewModel.ClientPassword);
+                await helper.StartAsync(ViewModel.ClientConnectAddress, ViewModel.ClientPort, ViewModel.ClientPassword, ViewModel.ClientName);
                 tcsClient.SetResult(helper);
             }
             catch (Exception ex)

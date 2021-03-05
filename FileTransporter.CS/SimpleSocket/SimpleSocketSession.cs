@@ -1,4 +1,7 @@
-﻿using System;
+﻿using FzLib.Extension;
+using System;
+using System.ComponentModel;
+using System.Net;
 using System.Net.Sockets;
 using System.Security;
 using System.Text;
@@ -6,20 +9,33 @@ using System.Threading.Tasks;
 
 namespace FileTransporter.SimpleSocket
 {
-    public class SimpleSocketSession<T> where T : SimpleSocketDataBase, new()
+    public class SimpleSocketSession<T> : INotifyPropertyChanged where T : SimpleSocketDataBase, new()
     {
         private Socket socket;
 
         public event EventHandler Stopping;
 
-        public string Password { get; set; }
+        private string password;
+
+        public string Password
+        {
+            get => password;
+            set => this.SetValueAndNotify(ref password, value, nameof(Password));
+        }
+
+        private string remoteName;
+
+        public string RemoteName
+        {
+            get => remoteName;
+            set => this.SetValueAndNotify(ref remoteName, value, nameof(RemoteName));
+        }
 
         public void Initialize(Socket socket)
         {
             try
             {
                 this.socket = socket;
-
                 OnConnected();
 
                 SimpleSocketPackage pack = new SimpleSocketPackage();
@@ -232,6 +248,20 @@ namespace FileTransporter.SimpleSocket
                 Send(new T() { Password = message.Password, Success = false, Message = "密码错误" });
                 return;
             }
+            if (string.IsNullOrEmpty(RemoteName))
+            {
+                if (string.IsNullOrEmpty(message.Name))
+                {
+                    if (socket.RemoteEndPoint is IPEndPoint ip)
+                    {
+                        RemoteName = ip.ToString();
+                    }
+                }
+                else
+                {
+                    RemoteName = message.Name;
+                }
+            }
             SimpleSocketUtility.Log(LogLevel.Debug, "接受到新的数据");
             if (tcs != null)
             {
@@ -251,6 +281,8 @@ namespace FileTransporter.SimpleSocket
         public event EventHandler Connected;
 
         public event EventHandler Disconnected;
+
+        public event PropertyChangedEventHandler PropertyChanged;
     }
 
     public class DataReceivedEventArgs<T> : EventArgs where T : SimpleSocketDataBase, new()

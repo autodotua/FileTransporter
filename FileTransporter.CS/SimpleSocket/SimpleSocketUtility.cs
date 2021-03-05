@@ -112,31 +112,9 @@ namespace FileTransporter.SimpleSocket
                     break;
             }
             Debug.WriteLine(msg);
-            NewLog?.Invoke(null, new SimpleSocketLogEventArgs(level, msg, ex));
+            NewLog?.Invoke(null, new LogEventArgs(level, msg, ex));
         }
 
-        public static event EventHandler<SimpleSocketLogEventArgs> NewLog;
-    }
-
-    public class SimpleSocketLogEventArgs : EventArgs
-    {
-        public SimpleSocketLogEventArgs(LogLevel level, string message, Exception exception)
-        {
-            Level = level;
-            Message = message;
-            Exception = exception;
-        }
-
-        public LogLevel Level { get; }
-        public string Message { get; }
-        public Exception Exception { get; }
-    }
-
-    public enum LogLevel
-    {
-        Debug,
-        Info,
-        Warn,
-        Error
+        public static event EventHandler<LogEventArgs> NewLog;
     }
 }

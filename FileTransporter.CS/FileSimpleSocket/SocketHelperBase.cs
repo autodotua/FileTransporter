@@ -52,29 +52,31 @@ namespace FileTransporter.FileSimpleSocket
 
         protected virtual async Task SendFileAsync(SimpleSocketSession<SocketData> session,
             string path,
-            Action<long, long> progress = null,
-            Func<bool> isCanceled = null)
+            Action<TransportProgress> progress = null)
         {
             var file = SendFileHead(session, path);
             while (true)
             {
                 var request = await session.WaitForNextReceiveAsync(Config.Instance.FileTimeout);
-                if (isCanceled != null && isCanceled())
+                var data = request.Get<FileBufferRequest>();
+                Log(LogLevel.Info, $"收到发送文件{data.Position}请求");
+
+                TransportProgress p = null;
+                if (data.End)
+                {
+                    p = new TransportProgress(file.Length, file.Length);
+                    Log(LogLevel.Info, "发送文件完成");
+                    return;
+                }
+                p = new TransportProgress(data.Position, file.Length);
+                progress?.Invoke(p);
+                if (p.Cancel)
                 {
                     SocketData cancelData = new SocketData(Response, SocketDataAction.FileCanceledResponse, file);
                     session.Send(cancelData);
                     Log(LogLevel.Info, $"发送取消");
                     break;
                 }
-                var data = request.Get<FileBufferRequest>();
-                Log(LogLevel.Info, $"收到发送文件{data.Position}请求");
-                if (data.End)
-                {
-                    progress?.Invoke(file.Length, file.Length);
-                    Log(LogLevel.Info, "发送文件完成");
-                    return;
-                }
-                progress?.Invoke(data.Position, file.Length);
                 SendFileBuffer(session, path, data.Position, file.ID);
             }
         }

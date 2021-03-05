@@ -19,6 +19,7 @@
                 <ui:SimpleStackPanel Orientation="Vertical" Spacing="24">
                     <TextBox ui:ControlHelper.Header="服务器地址" Text="{Binding ClientConnectAddress}" />
                     <TextBox ui:ControlHelper.Header="服务器端口" Text="{Binding ClientPort}" />
+                    <TextBox ui:ControlHelper.Header="本机名" Text="{Binding ClientName}" />
                     <TextBox ui:ControlHelper.Header="连接密钥" Text="{Binding ClientPassword}" />
                     <Button Content="连接服务器" Click="ClientButton_Click" />
                 </ui:SimpleStackPanel>

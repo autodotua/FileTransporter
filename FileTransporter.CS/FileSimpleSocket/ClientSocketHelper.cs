@@ -10,52 +10,58 @@ namespace FileTransporter.FileSimpleSocket
 {
     public class ClientSocketHelper : SocketHelperBase
     {
-        private SimpleSocketClient<SocketData> client;
+        public SimpleSocketClient<SocketData> Client { get; private set; }
 
-        public async Task StartAsync(string address, ushort port, string password)
+        public async Task StartAsync(string address, ushort port, string password, string name)
         {
             Debug.Assert(!Started);
             Debug.Assert(!Closed);
             Debug.Assert(port > 0);
             Debug.Assert(address != null);
 
-            client = new SimpleSocketClient<SocketData>();
+            Client = new SimpleSocketClient<SocketData>();
 
             if (!string.IsNullOrEmpty(password))
             {
-                client.SetPassword(password);
+                Client.SetPassword(password);
             }
-            await client.StartAsync(address, port);
+            await Client.StartAsync(address, port);
             try
             {
-                await CheckAsync();
+                await CheckAsync(name);
             }
             catch
             {
-                client.Close();
+                Client.Close();
                 Closed = true;
                 throw;
             }
-            client.Session.ReceivedData += Session_ReceivedData;
+            Client.Session.ReceivedData += Session_ReceivedData;
             Started = true;
         }
 
         private void Session_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
         {
+            switch (e.Data.Action)
+            {
+                case SocketDataAction.FileSendRequest:
+                    ReceiveFile(e.Session, e.Data.Get<FileHead>());
+                    break;
+            }
             Log(LogLevel.Debug, "客户端接收到新数据，类型为" + e.Data.Action);
         }
 
-        public Task SendFileAsync(string path, Action<long, long> progress,
-            Func<bool> isCanceled = null)
+        public Task SendFileAsync(string path, Action<TransportProgress> progress = null)
         {
-            return SendFileAsync(client.Session, path, progress, isCanceled);
+            return SendFileAsync(Client.Session, path, progress);
         }
 
-        private async Task CheckAsync()
+        private async Task CheckAsync(string name)
         {
             var data = new SocketData(Request, SocketDataAction.CheckRequest);
-            client.Session.Send(data);
-            await client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
+            data.Name = name;
+            Client.Session.Send(data);
+            await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
         }
     }
 }
