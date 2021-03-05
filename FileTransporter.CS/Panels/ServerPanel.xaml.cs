@@ -5,16 +5,15 @@ using System.Windows.Controls;
 
 namespace FileTransporter.Panels
 {
-    public partial class ClientPanel : UserControl
+    public partial class ServerPanel : UserControl
     {
-        public ClientPanelViewModel ViewModel { get; set; }
+        public ServerPanelViewModel ViewModel { get; set; }
 
-        public ClientPanel(ClientSocketHelper socket)
+        public ServerPanel(ServerSocketHelper socket)
         {
-            ViewModel = new ClientPanelViewModel(socket);
+            ViewModel = new ServerPanelViewModel(socket);
             DataContext = ViewModel;
             InitializeComponent();
-            //sfp.Socket = socket;
         }
     }
 }

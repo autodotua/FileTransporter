@@ -32,5 +32,7 @@ namespace FileTransporter
         /// 文件快超时时间
         /// </summary>
         public int FileTimeout { get; set; } = 1000 * 60;
+
+        public string FileReceiveFolder { get; set; } = "files";
     }
 }

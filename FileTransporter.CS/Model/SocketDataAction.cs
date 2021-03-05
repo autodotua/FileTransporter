@@ -2,10 +2,11 @@
 {
     public enum SocketDataAction
     {
-        PasswordResponse,
-        PasswordRequest,
+        CheckResponse,
+        CheckRequest,
         FileSendRequest,
         FileBufferResponse,
+        FileCanceledResponse,
         FileBufferRequest,
         Error,
     }

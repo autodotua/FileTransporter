@@ -11,23 +11,8 @@ namespace FileTransporter.FileSimpleSocket
 {
     public class SocketHelperBase
     {
-        protected string password;
         public bool Started { get; protected set; }
         public bool Closed { get; protected set; }
-
-        public static string CreateMD5(string input)
-        {
-            using System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-            byte[] hashBytes = md5.ComputeHash(inputBytes);
-
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < hashBytes.Length; i++)
-            {
-                sb.Append(hashBytes[i].ToString("X2"));
-            }
-            return sb.ToString();
-        }
 
         private FileHead SendFileHead(SimpleSocketSession<SocketData> session, string path)
         {
@@ -65,13 +50,22 @@ namespace FileTransporter.FileSimpleSocket
             Log(LogLevel.Info, $"开始发送长度为{array.Length}的文件块");
         }
 
-        protected async Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<long, long> progress)
+        protected virtual async Task SendFileAsync(SimpleSocketSession<SocketData> session,
+            string path,
+            Action<long, long> progress = null,
+            Func<bool> isCanceled = null)
         {
             var file = SendFileHead(session, path);
             while (true)
             {
                 var request = await session.WaitForNextReceiveAsync(Config.Instance.FileTimeout);
-
+                if (isCanceled != null && isCanceled())
+                {
+                    SocketData cancelData = new SocketData(Response, SocketDataAction.FileCanceledResponse, file);
+                    session.Send(cancelData);
+                    Log(LogLevel.Info, $"发送取消");
+                    break;
+                }
                 var data = request.Get<FileBufferRequest>();
                 Log(LogLevel.Info, $"收到发送文件{data.Position}请求");
                 if (data.End)
@@ -89,42 +83,77 @@ namespace FileTransporter.FileSimpleSocket
         {
             var bufferLength = Config.Instance.FileBufferLength;
             Log(LogLevel.Info, "开始接收文件");
-            using var fs = new FileStream(Path.Combine(Directory.GetCurrentDirectory(), file.ID.ToString()), FileMode.Create);
-            long bufferCount = file.Length / bufferLength + (file.Length % bufferLength == 0 ? 0 : 1);
-            for (long i = 0; i < bufferCount; i++)
+            string tempFilePath = Path.Combine(Config.Instance.FileReceiveFolder, "temp", file.ID.ToString());
+            if (!Directory.Exists(Path.GetDirectoryName(tempFilePath)))
             {
-                FileBufferRequest request = new FileBufferRequest()
+                Directory.CreateDirectory(Path.GetDirectoryName(tempFilePath));
+            }
+            using var fs = new FileStream(tempFilePath, FileMode.Create);
+            long bufferCount = file.Length / bufferLength + (file.Length % bufferLength == 0 ? 0 : 1);
+            bool canceled = false;
+            try
+            {
+                for (long i = 0; i < bufferCount; i++)
                 {
-                    ID = file.ID,
-                    Position = i * bufferLength,
-                    End = false,
-                };
+                    FileBufferRequest request = new FileBufferRequest()
+                    {
+                        ID = file.ID,
+                        Position = i * bufferLength,
+                        End = false,
+                    };
 
-                SocketData data = new SocketData(Request, SocketDataAction.FileBufferRequest, request);
+                    SocketData data = new SocketData(Request, SocketDataAction.FileBufferRequest, request);
 
-                //var resp = await SendAndWaitForResponseAysnc(session, data, 20000);
-                session.Send(data);
-                Log(LogLevel.Info, $"等待接收位置为{request.Position}的文件块");
-                var resp = await session.WaitForNextReceiveAsync(Config.Instance.FileTimeout);
-                switch (resp.Action)
-                {
-                    case SocketDataAction.FileBufferResponse:
-                        Log(LogLevel.Info, $"接收到长度为{resp.Get<FileBufferResponse>().Length}的文件块");
-                        fs.Write(resp.Get<FileBufferResponse>().Content);
-                        break;
+                    //var resp = await SendAndWaitForResponseAysnc(session, data, 20000);
+                    session.Send(data);
+                    Log(LogLevel.Info, $"等待接收位置为{request.Position}的文件块");
+                    var resp = await session.WaitForNextReceiveAsync(Config.Instance.FileTimeout);
+                    switch (resp.Action)
+                    {
+                        case SocketDataAction.FileBufferResponse:
+                            Log(LogLevel.Info, $"接收到长度为{resp.Get<FileBufferResponse>().Length}的文件块");
+                            fs.Write(resp.Get<FileBufferResponse>().Content);
+                            break;
 
-                    case SocketDataAction.Error:
-                        throw new Exception(resp.GetString());
+                        case SocketDataAction.Error:
+                            throw new Exception(resp.GetString());
 
-                    default:
-                        Log(LogLevel.Warn, $"接收到未知指令：{resp.Action}，期望是{nameof(SocketDataAction.FileBufferResponse)}");
-                        break;
+                        case SocketDataAction.FileCanceledResponse:
+                            canceled = true;
+                            throw new OperationCanceledException();
+
+                        default:
+                            Log(LogLevel.Warn, $"接收到未知指令：{resp.Action}，期望是{nameof(SocketDataAction.FileBufferResponse)}");
+                            break;
+                    }
                 }
             }
-            fs.Flush();
-            fs.Close();
+            catch (OperationCanceledException ex)
+            {
+            }
+            catch (Exception ex)
+            {
+                Log(LogLevel.Warn, $"接收文件失败");
+            }
+            finally
+            {
+                fs.Flush();
+                fs.Close();
+            }
             Log(LogLevel.Info, "接收文件完成");
-            File.Move(file.ID.ToString(), FzLib.IO.FileSystem.GetNoDuplicateFile(file.Name));
+            if (canceled)
+            {
+                File.Delete(tempFilePath);
+            }
+            else
+            {
+                string filePath = Path.Combine(Config.Instance.FileReceiveFolder, file.Name);
+                if (!Directory.Exists(Path.GetDirectoryName(filePath)))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                }
+                File.Move(tempFilePath, FzLib.IO.FileSystem.GetNoDuplicateFile(filePath));
+            }
             session.Send(new SocketData(General,
                 SocketDataAction.FileBufferRequest,
                 new FileBufferRequest()

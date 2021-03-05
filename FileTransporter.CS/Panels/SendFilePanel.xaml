@@ -1,0 +1,125 @@
+﻿<UserControl
+    x:Class="FileTransporter.Panels.SendFilePanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:FzLib.WPF.Converters;assembly=FzCoreLib.Windows"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:FileTransporter.Panels"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
+    d:DesignHeight="450" d:DesignWidth="800"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <Style BasedOn="{StaticResource DefaultButtonStyle}" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="96" />
+            <Setter Property="Height" Value="32" />
+        </Style>
+        <converters:InverseBoolConverter x:Key="ibc" />
+        <converters:BoolLogicConverter x:Key="blc" />
+    </UserControl.Resources>
+    <Grid x:Name="grd">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ItemsControl Background="Transparent" ItemsSource="{Binding Files}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid HorizontalAlignment="Stretch">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="8" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="8" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock
+                            Grid.ColumnSpan="3" FontWeight="Bold"
+                            Text="{Binding File.Name}"
+                            ToolTip="{Binding File.FullName}" />
+                        <TextBlock Grid.Column="4" Text="{Binding Length}" />
+                        <TextBlock
+                            Grid.Row="2" Opacity="0.75"
+                            Text="{Binding File.LastWriteTime, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" />
+                        <ProgressBar
+                            Grid.Row="2" Grid.Column="2"
+                            Grid.ColumnSpan="3" Foreground="Green"
+                            Maximum="100"
+                            Value="{Binding Percent}" />
+                        <ui:AppBarButton
+                            Grid.RowSpan="99" Grid.Column="99"
+                            VerticalAlignment="Center"
+                            Click="DeleteButton_Click" Icon="Delete"
+                            IsCompact="True"
+                            LabelPosition="Collapsed"
+                            Tag="{Binding .}"
+                            ToolTip="移除">
+                            <ui:AppBarButton.IsEnabled>
+                                <MultiBinding Converter="{StaticResource blc}" ConverterParameter="nor">
+                                    <!--  IsEnabled="{Binding DataContext.Sending, Converter={StaticResource ibc}, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ItemsControl}}}"  -->
+                                    <Binding Path="DataContext.Sending" RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType={x:Type ItemsControl}}" />
+                                    <Binding Path="Finished" />
+                                </MultiBinding>
+                            </ui:AppBarButton.IsEnabled>
+                        </ui:AppBarButton>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button Click="BrowseButton_Click" Content="浏览..">
+                <Button.IsEnabled>
+                    <MultiBinding Converter="{StaticResource blc}" ConverterParameter="nor">
+                        <Binding Path="Sending" />
+                        <Binding Path="Stopping" />
+                    </MultiBinding>
+                </Button.IsEnabled>
+            </Button>
+            <Button Click="ClearButton_Click"
+                Grid.Column="2" Content="清空">
+                <Button.IsEnabled>
+                    <MultiBinding Converter="{StaticResource blc}" ConverterParameter="nor">
+                        <Binding Path="Sending" />
+                        <Binding Path="Stopping" />
+                    </MultiBinding>
+                </Button.IsEnabled>
+            </Button>
+            <Button
+                Grid.Column="4" Click="StopButton_Click"
+                Content="停止"
+                IsEnabled="{Binding Sending}" />
+            <Button
+                Grid.Column="6" Click="SendButton_Click"
+                Content="发送">
+                <Button.IsEnabled>
+                    <MultiBinding Converter="{StaticResource blc}" ConverterParameter="nor">
+                        <Binding Path="Sending" />
+                        <Binding Path="Stopping" />
+                    </MultiBinding>
+                </Button.IsEnabled>
+            </Button>
+        </Grid>
+    </Grid>
+</UserControl>

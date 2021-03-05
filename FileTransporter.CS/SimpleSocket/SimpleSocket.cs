@@ -2,23 +2,45 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace FileTransporter.SimpleSocket
 {
-    public abstract class SimpleSocketBase<T, K> where T : SimpleSocketSession<K>, new() where K : SimpleSocketDataBase
+    public abstract class SimpleSocketBase<T, K>
+        where T : SimpleSocketSession<K>, new()
+        where K : SimpleSocketDataBase, new()
     {
         protected Socket socket = null;
+        public string password;
 
         public abstract void Close();
+
+        public void SetPassword(string pswd)
+        {
+            if(string.IsNullOrEmpty(pswd))
+            {
+                return;
+            }
+            using System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+            byte[] inputBytes = Encoding.ASCII.GetBytes(pswd);
+            byte[] hashBytes = md5.ComputeHash(inputBytes);
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < hashBytes.Length; i++)
+            {
+                sb.Append(hashBytes[i].ToString("X2"));
+            }
+            password = sb.ToString();
+        }
     }
 
-    public class SimpleSocketServer<T> : SimpleSocketServer<SimpleSocketSession<T>, T> where T : SimpleSocketDataBase
+    public class SimpleSocketServer<T> : SimpleSocketServer<SimpleSocketSession<T>, T> where T : SimpleSocketDataBase, new()
     {
     }
 
-    public class SimpleSocketServer<T, K> : SimpleSocketBase<T, K> where T : SimpleSocketSession<K>, new() where K : SimpleSocketDataBase
+    public class SimpleSocketServer<T, K> : SimpleSocketBase<T, K> where T : SimpleSocketSession<K>, new() where K : SimpleSocketDataBase, new()
     {
         public int backlog = 10;
         private List<T> sessions = new List<T>();
@@ -51,6 +73,7 @@ namespace FileTransporter.SimpleSocket
             {
                 Socket clientSkt = socket.EndAccept(ar);
                 T session = new T();
+                session.Password = password;
                 sessions.Add(session);
                 session.ReceivedData += Session_ReceivedData;
                 session.Stopping += (p1, p2) =>
@@ -86,11 +109,13 @@ namespace FileTransporter.SimpleSocket
         }
     }
 
-    public class SimpleSocketClient<T> : SimpleSocketClient<SimpleSocketSession<T>, T> where T : SimpleSocketDataBase
+    public class SimpleSocketClient<T> : SimpleSocketClient<SimpleSocketSession<T>, T> where T : SimpleSocketDataBase, new()
     {
     }
 
-    public class SimpleSocketClient<T, K> : SimpleSocketBase<T, K> where T : SimpleSocketSession<K>, new() where K : SimpleSocketDataBase
+    public class SimpleSocketClient<T, K> : SimpleSocketBase<T, K>
+        where T : SimpleSocketSession<K>, new()
+        where K : SimpleSocketDataBase, new()
     {
         public T Session { get; private set; } = null;
         public int backlog = 10;
@@ -111,6 +136,7 @@ namespace FileTransporter.SimpleSocket
                      {
                          socket.EndConnect(ar);
                          Session = new T();
+                         Session.Password = password;
                          Session.Initialize(socket);
                          SimpleSocketUtility.Log(LogLevel.Info, "客户端连接服务器成功");
                          tcs.SetResult();

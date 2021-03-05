@@ -21,20 +21,20 @@ namespace FileTransporter.FileSimpleSocket
 
             client = new SimpleSocketClient<SocketData>();
 
-            await client.StartAsync(address, port);
             if (!string.IsNullOrEmpty(password))
             {
-                this.password = CreateMD5(password);
-                try
-                {
-                    await VerifyPasswordAsync();
-                }
-                catch
-                {
-                    client.Close();
-                    Closed = true;
-                    throw;
-                }
+                client.SetPassword(password);
+            }
+            await client.StartAsync(address, port);
+            try
+            {
+                await CheckAsync();
+            }
+            catch
+            {
+                client.Close();
+                Closed = true;
+                throw;
             }
             client.Session.ReceivedData += Session_ReceivedData;
             Started = true;
@@ -45,30 +45,17 @@ namespace FileTransporter.FileSimpleSocket
             Log(LogLevel.Debug, "客户端接收到新数据，类型为" + e.Data.Action);
         }
 
-        //private Task<SocketData> SendAndWaitForResponseAysnc(SocketData data, int timeout = 2000)
-        //{
-        //    return base.SendAndWaitForResponseAysnc(client.Session, data, timeout);
-        //}
-
-        public Task SendFileAsync(string path, Action<long, long> progress)
+        public Task SendFileAsync(string path, Action<long, long> progress,
+            Func<bool> isCanceled = null)
         {
-            return SendFileAsync(client.Session, path, progress);
+            return SendFileAsync(client.Session, path, progress, isCanceled);
         }
 
-        private async Task VerifyPasswordAsync()
+        private async Task CheckAsync()
         {
-            if (string.IsNullOrEmpty(password))
-            {
-                return;
-            }
-            var data = new SocketData(Request, SocketDataAction.PasswordRequest, password);
-            //var resp = await SendAndWaitForResponseAysnc(data);
+            var data = new SocketData(Request, SocketDataAction.CheckRequest);
             client.Session.Send(data);
-            var resp = await client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
-            if (!resp.GetBool())
-            {
-                throw new Exception("密码错误");
-            }
+            await client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
         }
     }
 }

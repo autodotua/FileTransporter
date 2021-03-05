@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Security;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace FileTransporter.SimpleSocket
 {
-    public class SimpleSocketSession<T> where T : SimpleSocketDataBase
+    public class SimpleSocketSession<T> where T : SimpleSocketDataBase, new()
     {
         private Socket socket;
 
         public event EventHandler Stopping;
+
+        public string Password { get; set; }
 
         public void Initialize(Socket socket)
         {
@@ -128,11 +132,12 @@ namespace FileTransporter.SimpleSocket
 
         public void Send(T msg)
         {
-            byte[] data = SimpleSocketUtility.PackLenInfo(SimpleSocketUtility.Serialize<T>(msg));
+            msg.Password = Password;
+            byte[] data = SimpleSocketUtility.PackLenInfo(SimpleSocketUtility.Serialize(msg));
             Send(data);
         }
 
-        public void Send(byte[] data)
+        private void Send(byte[] data)
         {
             NetworkStream ns = null;
             try
@@ -205,11 +210,31 @@ namespace FileTransporter.SimpleSocket
 
         protected virtual void OnReciveData(T message)
         {
-            SimpleSocketUtility.Log(LogLevel.Debug, "接受到新的数据");
-            if (waitingTcs != null)
+            TaskCompletionSource<T> tcs = waitingTcs;
+            waitingTcs = null;
+            if (!message.Success)
             {
-                var tcs = waitingTcs;
-                waitingTcs = null;
+                SimpleSocketUtility.Log(LogLevel.Error, "对方返回错误：" + message.Message);
+                if (tcs != null)
+                {
+                    tcs.SetException(new Exception("对方返回错误：" + message.Message));
+                }
+                return;
+            }
+
+            if (!(string.IsNullOrEmpty(message.Password) && string.IsNullOrEmpty(Password)) && Password != message.Password)
+            {
+                SimpleSocketUtility.Log(LogLevel.Error, "接受到新的数据，密码错误");
+                if (tcs != null)
+                {
+                    tcs.SetException(new VerificationException("接受到新的数据，密码错误"));
+                }
+                Send(new T() { Password = message.Password, Success = false, Message = "密码错误" });
+                return;
+            }
+            SimpleSocketUtility.Log(LogLevel.Debug, "接受到新的数据");
+            if (tcs != null)
+            {
                 tcs.SetResult(message);
             }
             ReceivedData?.Invoke(this, new DataReceivedEventArgs<T>(this, message));
@@ -228,7 +253,7 @@ namespace FileTransporter.SimpleSocket
         public event EventHandler Disconnected;
     }
 
-    public class DataReceivedEventArgs<T> : EventArgs where T : SimpleSocketDataBase
+    public class DataReceivedEventArgs<T> : EventArgs where T : SimpleSocketDataBase, new()
     {
         public DataReceivedEventArgs(SimpleSocketSession<T> session, T data)
         {

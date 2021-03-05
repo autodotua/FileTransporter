@@ -1,6 +1,8 @@
 ﻿using FileTransporter.Model;
 using FileTransporter.SimpleSocket;
+using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using static FileTransporter.Model.SocketDataType;
 using static FileTransporter.SimpleSocket.SimpleSocketUtility;
 
@@ -15,11 +17,12 @@ namespace FileTransporter.FileSimpleSocket
             Debug.Assert(!Started);
             Debug.Assert(!Closed);
             Debug.Assert(port > 0);
+            server = new SimpleSocketServer<SocketData>();
             if (!string.IsNullOrEmpty(password))
             {
-                this.password = CreateMD5(password);
+                server.SetPassword(password);
             }
-            server = new SimpleSocketServer<SocketData>();
+            server.SetPassword(password);
             server.Start("0.0.0.0", port);
             server.ReceivedData += Server_ReceivedData;
             Started = true;
@@ -30,8 +33,8 @@ namespace FileTransporter.FileSimpleSocket
             Log(LogLevel.Debug, "服务器接收到新数据，类型为" + e.Data.Action);
             switch (e.Data.Action)
             {
-                case SocketDataAction.PasswordRequest:
-                    VerifyPassword(e.Session, e.Data);
+                case SocketDataAction.CheckRequest:
+                    VerifyPassword(e.Session);
                     break;
 
                 case SocketDataAction.FileSendRequest:
@@ -40,11 +43,16 @@ namespace FileTransporter.FileSimpleSocket
             }
         }
 
-        private void VerifyPassword(SimpleSocketSession<SocketData> session, SocketData data)
+        private void VerifyPassword(SimpleSocketSession<SocketData> session)
         {
-            string password = data.GetString();
-            var resp = new SocketData(Response, SocketDataAction.PasswordResponse, password == this.password);
+            var resp = new SocketData(Response, SocketDataAction.CheckResponse);
             Send(session, resp);
+        }
+
+        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<long, long> progress,
+            Func<bool> isCanceled = null)
+        {
+            return base.SendFileAsync(session, path, progress, isCanceled);
         }
 
         private void Send(SimpleSocketSession<SocketData> session, SocketData data)
