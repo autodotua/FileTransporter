@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:FileTransporter"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.modernwpf.com/2019"
-    x:Name="Window" Title="FRP GUI - 端口转发"
+    x:Name="Window" Title="文件运输机"
     Width="1000" Height="800"
     ui:TitleBar.ButtonStyle="{DynamicResource AppTitleBarButtonStyle}"
     ui:TitleBar.ExtendViewIntoTitleBar="True"

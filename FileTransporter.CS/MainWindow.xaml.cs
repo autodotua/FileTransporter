@@ -1,75 +1,19 @@
 ﻿using FileTransporter.Panels;
 using FileTransporter.SimpleSocket;
-using FileTransporter.Util;
-using FzLib.Extension;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace FileTransporter
 {
-    public class MainWindowViewModel : INotifyPropertyChanged
-    {
-        public ObservableCollection<Log> Logs { get; } = new ObservableCollection<Log>();
-
-        private int maxLogCount = 10000;
-
-        public MainWindowViewModel()
-        {
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public int MaxLogCount
-        {
-            get => maxLogCount;
-            set
-            {
-                if (value > 100000)
-                {
-                    value = 100000;
-                }
-                else if (value < 10)
-                {
-                    value = 10;
-                }
-                this.SetValueAndNotify(ref maxLogCount, value, nameof(MaxLogCount));
-            }
-        }
-
-        private UserControl panel;
-
-        public UserControl Panel
-        {
-            get => panel;
-            set => this.SetValueAndNotify(ref panel, value, nameof(Panel));
-        }
-    }
-
     public partial class MainWindow : Window
     {
         public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
 
         public MainWindow(bool autoStart = false)
         {
-            bool clientOn = Config.Instance.ClientOn;
-            bool serverOn = Config.Instance.ServerOn;
             InitializeComponent();
             DataContext = ViewModel;
             ViewModel.Panel = new LoginPanel();
@@ -87,13 +31,21 @@ namespace FileTransporter
 
         private void SimpleSocketUtility_NewLog(object sender, SimpleSocketLogEventArgs e)
         {
+#if !DEBUG
+            if (e.Level == LogLevel.Debug)
+            {
+                return;
+            }
+#endif
             Dispatcher.Invoke(() =>
             {
                 Brush brush = e.Level switch
                 {
                     LogLevel.Error => Brushes.Red,
+                    LogLevel.Debug => Brushes.Gray,
                     LogLevel.Info => Foreground,
-                    LogLevel.Warn => new SolidColorBrush(Color.FromArgb(0xFF, 0xDD, 0xDD, 0x00))
+                    LogLevel.Warn => new SolidColorBrush(Color.FromArgb(0xFF, 0xDD, 0xDD, 0x00)),
+                    _ => throw new NotImplementedException()
                 };
                 ViewModel.Logs.Add(new Log()
                 {

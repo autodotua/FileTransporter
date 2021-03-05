@@ -1,11 +1,6 @@
-﻿using FileTransporter.Util;
-using FzLib.Program;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -39,9 +34,11 @@ namespace FileTransporter
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+#if !DEBUG
             UnhandledException.RegistAll();
 
             UnhandledException.UnhandledExceptionCatched += UnhandledException_UnhandledExceptionCatched;
+#endif
             FzLib.Program.App.SetWorkingDirectoryToAppPath();
             FzLib.Program.Startup.AppName = Name;
             tray = new TrayIcon(new System.Drawing.Icon("./icon.ico"), App.Name);
@@ -76,7 +73,10 @@ namespace FileTransporter
             }
             finally
             {
-                Application.Current.Shutdown();
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
             }
         }
 

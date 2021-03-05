@@ -1,28 +1,17 @@
-﻿using FileTransporter.Util;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FileTransporter.FileSimpleSocket;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace FileTransporter.Panels
 {
-    /// <summary>
-    /// ClientPanel.xaml 的交互逻辑
-    /// </summary>
     public partial class ClientPanel : UserControl
     {
+        public ClientPanelViewModel ViewMode { get; set; } = new ClientPanelViewModel();
+
         public ClientPanel(ClientSocketHelper socket)
         {
+            DataContext = ViewMode;
             InitializeComponent();
             Socket = socket;
         }
@@ -31,7 +20,29 @@ namespace FileTransporter.Panels
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            Socket.SendFileAsync(@"C:\Users\autod\Desktop\Road Rash 2002.zip");
+            foreach (var file in ViewMode.Files)
+            {
+                Socket.SendFileAsync(file.File.FullName, (p, l) =>
+                {
+                    file.UpdateProgress(p);
+                });
+            }
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "所有文件|*.*",
+                Multiselect = true
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                foreach (var file in dialog.FileNames)
+                {
+                    ViewMode.Files.Add(new TransporterFile(file));
+                }
+            }
         }
     }
 }

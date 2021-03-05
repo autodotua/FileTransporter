@@ -1,6 +1,4 @@
-﻿using FileTransporter;
-using log4net;
-using log4net.Repository.Hierarchy;
+﻿using log4net;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -101,6 +99,10 @@ namespace FileTransporter.SimpleSocket
                     log.Info(msg, ex);
                     break;
 
+                case LogLevel.Debug:
+                    log.Debug(msg, ex);
+                    break;
+
                 case LogLevel.Warn:
                     log.Warn(msg, ex);
                     break;
@@ -132,6 +134,7 @@ namespace FileTransporter.SimpleSocket
 
     public enum LogLevel
     {
+        Debug,
         Info,
         Warn,
         Error

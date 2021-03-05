@@ -1,6 +1,4 @@
 ﻿using FzLib.DataStorage.Serialization;
-using System.Collections.ObjectModel;
-using System.IO;
 
 namespace FileTransporter
 {
@@ -16,23 +14,23 @@ namespace FileTransporter
                 {
                     instance = OpenOrCreate<Config>();
                 }
-                if (instance.Client == null)
-                {
-                    instance.Client = new ClientConfig();
-                }
-                if (instance.Server == null)
-                {
-                    instance.Server = new ServerConfig();
-                }
                 return instance;
             }
         }
 
-        public ClientConfig Client { get; set; }
-        public ServerConfig Server { get; set; }
-        public bool ClientOn { get; set; }
-        public bool ServerOn { get; set; }
+        /// <summary>
+        /// 文件块大小
+        /// </summary>
+        public int FileBufferLength { get; set; } = 1024 * 1024 * 10;//10M
 
-        public int LastTab { get; set; }
+        /// <summary>
+        /// 命令超时时间
+        /// </summary>
+        public int CommandTimeout { get; set; } = 2000;
+
+        /// <summary>
+        /// 文件快超时时间
+        /// </summary>
+        public int FileTimeout { get; set; } = 1000 * 60;
     }
 }

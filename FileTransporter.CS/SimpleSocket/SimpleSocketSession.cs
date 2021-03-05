@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace FileTransporter.SimpleSocket
 {
@@ -26,9 +27,9 @@ namespace FileTransporter.SimpleSocket
                     new AsyncCallback(ReceiveHeadData),
                     pack);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                SimpleSocketUtility.Log(LogLevel.Error, "StartRcvData:" + e.Message);
+                SimpleSocketUtility.Log(LogLevel.Error, "开始接收数据失败", ex);
             }
         }
 
@@ -76,7 +77,7 @@ namespace FileTransporter.SimpleSocket
             }
             catch (Exception ex)
             {
-                SimpleSocketUtility.Log(LogLevel.Error, "接受数据头失败", ex);
+                SimpleSocketUtility.Log(LogLevel.Error, "接收数据头失败", ex);
             }
         }
 
@@ -121,7 +122,7 @@ namespace FileTransporter.SimpleSocket
             }
             catch (Exception ex)
             {
-                SimpleSocketUtility.Log(LogLevel.Error, "接受数据主体失败", ex);
+                SimpleSocketUtility.Log(LogLevel.Error, "接收数据主体失败", ex);
             }
         }
 
@@ -168,6 +169,28 @@ namespace FileTransporter.SimpleSocket
             }
         }
 
+        private TaskCompletionSource<T> waitingTcs;
+        public const int DefaultTimeOut = 2000;
+
+        public Task<T> WaitForNextReceiveAsync(int timeout)
+        {
+            if (waitingTcs != null)
+            {
+                throw new Exception("已经有一个等待正在执行");
+            }
+            waitingTcs = new TaskCompletionSource<T>();
+            var thisTcs = waitingTcs;
+            Task.Delay(timeout).ContinueWith(p =>
+            {
+                if (waitingTcs != null && waitingTcs == thisTcs)
+                {
+                    waitingTcs.SetException(new TimeoutException("等待回应超时"));
+                    waitingTcs = null;
+                }
+            });
+            return waitingTcs.Task;
+        }
+
         private void Stop()
         {
             Stopping?.Invoke(this, new EventArgs());
@@ -182,7 +205,13 @@ namespace FileTransporter.SimpleSocket
 
         protected virtual void OnReciveData(T message)
         {
-            SimpleSocketUtility.Log(LogLevel.Info, "接受到新的数据");
+            SimpleSocketUtility.Log(LogLevel.Debug, "接受到新的数据");
+            if (waitingTcs != null)
+            {
+                var tcs = waitingTcs;
+                waitingTcs = null;
+                tcs.SetResult(message);
+            }
             ReceivedData?.Invoke(this, new DataReceivedEventArgs<T>(this, message));
         }
 
