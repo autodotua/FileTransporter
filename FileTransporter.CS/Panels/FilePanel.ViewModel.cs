@@ -7,12 +7,12 @@ using System.ComponentModel;
 
 namespace FileTransporter.Panels
 {
-    public class SendFilePanelViewModel : INotifyPropertyChanged
+    public class FilePanelViewModel : INotifyPropertyChanged
     {
-        public ObservableCollection<TransporterFile> Files { get; } = new ObservableCollection<TransporterFile>();
-        private TransporterFile selectedFile;
+        public ObservableCollection<TransportFile> Files { get; } = new ObservableCollection<TransportFile>();
+        private TransportFile selectedFile;
 
-        public TransporterFile SelectedFile
+        public TransportFile SelectedFile
         {
             get => selectedFile;
             set => this.SetValueAndNotify(ref selectedFile, value, nameof(SelectedFile));
@@ -26,14 +26,14 @@ namespace FileTransporter.Panels
             set => this.SetValueAndNotify(ref type, value, nameof(Type));
         }
 
-        private bool sending;
+        private bool working;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public bool Sending
+        public bool Working
         {
-            get => sending;
-            set => this.SetValueAndNotify(ref sending, value, nameof(Sending));
+            get => working;
+            set => this.SetValueAndNotify(ref working, value, nameof(Working));
         }
 
         private bool waiting;

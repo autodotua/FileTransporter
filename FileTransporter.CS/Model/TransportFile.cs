@@ -7,14 +7,14 @@ using System.Windows.Input;
 
 namespace FileTransporter.Model
 {
-    public class TransporterFile : INotifyPropertyChanged
+    public class TransportFile : INotifyPropertyChanged
     {
-        public TransporterFile(string file)
+        public TransportFile(string file)
         {
             File = new FileInfo(file);
         }
 
-        public TransporterFile()
+        public TransportFile()
         { }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -86,15 +86,54 @@ namespace FileTransporter.Model
         public int Percent
         {
             get => percent;
-            set => this.SetValueAndNotify(ref percent, value, nameof(Percent), nameof(Finished));
+            set => this.SetValueAndNotify(ref percent, value, nameof(Percent));
         }
 
         public void UpdateProgress(long sendedByteCount)
         {
             Percent = (int)(100.0 * sendedByteCount / Length);
             TransportedLength = sendedByteCount;
+            if (TransportedLength == Length)
+            {
+                Status = TransportFileStatus.Complete;
+            }
         }
 
-        public bool Finished => Percent == 100;
+        private TransportFileStatus status;
+
+        public TransportFileStatus Status
+        {
+            get => status;
+            set => this.SetValueAndNotify(ref status, value, nameof(Status));
+        }
+
+        private string from;
+
+        public string From
+        {
+            get => from;
+            set => this.SetValueAndNotify(ref from, value, nameof(From));
+        }
+    }
+
+    public enum TransportFileStatus
+    {
+        [Description("就绪")]
+        Ready,
+
+        [Description("正在发送")]
+        Sending,
+
+        [Description("正在接收")]
+        Receiving,
+
+        [Description("完成")]
+        Complete,
+
+        [Description("已取消")]
+        Canceled,
+
+        [Description("发生错误")]
+        Error
     }
 }

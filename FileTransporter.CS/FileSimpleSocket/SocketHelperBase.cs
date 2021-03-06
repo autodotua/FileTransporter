@@ -61,7 +61,7 @@ namespace FileTransporter.FileSimpleSocket
                 var data = request.Get<FileBufferRequest>();
                 Log(LogLevel.Info, $"收到发送文件{data.Position}请求");
 
-                TransportProgress p = null;
+                TransportProgress p;
                 if (data.Type == FileRequestType.End)
                 {
                     p = new TransportProgress(file.Length, file.Length);
@@ -72,7 +72,7 @@ namespace FileTransporter.FileSimpleSocket
                 if (data.Type == FileRequestType.Cancel)
                 {
                     Log(LogLevel.Info, "发送文件被取消");
-                    throw new Exception("发送文件被取消");
+                    throw new OperationCanceledException("发送文件被取消");
                 }
                 p = new TransportProgress(file.Length, data.Position);
                 progress?.Invoke(p);
@@ -169,6 +169,8 @@ namespace FileTransporter.FileSimpleSocket
             if (canceled)
             {
                 File.Delete(tempFilePath);
+                var e = new TransportFileProgressEventArgs(session, file, -1) { Cancel = true };
+                TransportFileProgress?.Invoke(this, e);
             }
             else
             {
@@ -178,14 +180,14 @@ namespace FileTransporter.FileSimpleSocket
                     Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                 }
                 File.Move(tempFilePath, FzLib.IO.FileSystem.GetNoDuplicateFile(filePath));
+                session.Send(new SocketData(General,
+                    SocketDataAction.FileBufferRequest,
+                    new FileBufferRequest()
+                    {
+                        ID = file.ID,
+                        Type = FileRequestType.End
+                    }));
             }
-            session.Send(new SocketData(General,
-                SocketDataAction.FileBufferRequest,
-                new FileBufferRequest()
-                {
-                    ID = file.ID,
-                    Type = FileRequestType.End
-                }));
         }
 
         public event EventHandler<TransportFileProgressEventArgs> TransportFileProgress;

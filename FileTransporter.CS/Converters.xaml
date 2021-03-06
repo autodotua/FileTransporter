@@ -8,4 +8,5 @@
     <converters:CountMoreThanZeroConverter x:Key="cmt0c" />
     <converters:Equal2VisiableConverter x:Key="e2vc" />
     <converters:FileLength2StringConverter x:Key="fl2sc" />
+    <converters:Enum2DescriptionConverter x:Key="e2dc" />
 </ResourceDictionary>

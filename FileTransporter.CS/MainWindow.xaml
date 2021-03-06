@@ -141,7 +141,7 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock x:Name="tbkDialogMessage" />
+                    <TextBlock x:Name="tbkDialogMessage" TextWrapping="Wrap" />
                 </Grid>
             </ui:ContentDialog>
         </Grid>

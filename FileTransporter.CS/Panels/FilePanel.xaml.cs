@@ -20,11 +20,11 @@ using System.Windows.Shapes;
 
 namespace FileTransporter.Panels
 {
-    public partial class SendFilePanel : UserControl
+    public partial class FilePanel : UserControl
     {
-        public SendFilePanelViewModel ViewModel { get; } = new SendFilePanelViewModel();
+        public FilePanelViewModel ViewModel { get; } = new FilePanelViewModel();
 
-        public SendFilePanel()
+        public FilePanel()
         {
             InitializeComponent();
             DataContext = ViewModel;
@@ -38,12 +38,12 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty SocketProperty = DependencyProperty.Register(
      nameof(Socket),
       typeof(SocketHelperBase),
-      typeof(SendFilePanel),
+      typeof(FilePanel),
       new PropertyMetadata(null, new PropertyChangedCallback((s, e) =>
       {
-          if ((s as SendFilePanel).Type == FilePanelType.Receive)
+          if ((s as FilePanel).Type == FilePanelType.Receive)
           {
-              (s as SendFilePanel).StartListenFileReceive();
+              (s as FilePanel).StartListenFileReceive();
           }
       })));
 
@@ -56,7 +56,7 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty SessionProperty = DependencyProperty.Register(
      nameof(Session),
       typeof(SimpleSocketSession<SocketData>),
-      typeof(SendFilePanel));
+      typeof(FilePanel));
 
         public SimpleSocketSession<SocketData> Session
         {
@@ -82,21 +82,30 @@ namespace FileTransporter.Panels
 
         private void Socket_TransportFileProgress(object sender, TransportFileProgressEventArgs e)
         {
-            TransporterFile file = ViewModel.Files.FirstOrDefault(p => p.ID == e.File.ID);
+            TransportFile file = ViewModel.Files.FirstOrDefault(p => p.ID == e.File.ID);
             if (file == null)
             {
-                file = new TransporterFile()
-                {
-                    ID = e.File.ID,
-                    Length = e.File.Length,
-                    Name = e.File.Name,
-                    Path = e.File.Name,
-                    Time = DateTime.Now,
-                };
                 Dispatcher.Invoke(() =>
                 {
+                    file = new TransportFile()
+                    {
+                        ID = e.File.ID,
+                        Length = e.File.Length,
+                        Name = e.File.Name,
+                        Path = e.File.Name,
+                        Time = DateTime.Now,
+                        Status = TransportFileStatus.Receiving,
+                        From = MainWindow.Current.IsServer ? e.Session.RemoteName : ""
+                    };
                     ViewModel.Files.Add(file);
                 });
+            }
+            if (e.Cancel)
+            {
+                ViewModel.Working = false;
+                ViewModel.Stopping = false;
+                file.Status = TransportFileStatus.Canceled;
+                return;
             }
             Dispatcher.Invoke(() =>
             {
@@ -104,21 +113,32 @@ namespace FileTransporter.Panels
             });
             if (ViewModel.Stopping)
             {
+                file.Status = TransportFileStatus.Canceled;
                 e.Cancel = true;
+                ViewModel.Working = false;
+                ViewModel.Stopping = false;
+            }
+            else if (file.Length == file.TransportedLength)
+            {
+                ViewModel.Working = false;
+            }
+            else
+            {
+                ViewModel.Working = true;
             }
         }
 
         public static readonly DependencyProperty TypeProperty = DependencyProperty.Register(
      nameof(Type),
       typeof(FilePanelType),
-      typeof(SendFilePanel),
+      typeof(FilePanel),
       new PropertyMetadata(FilePanelType.Send
           , new PropertyChangedCallback((s, e) =>
           {
-              (s as SendFilePanel).ViewModel.Type = (FilePanelType)e.NewValue;
+              (s as FilePanel).ViewModel.Type = (FilePanelType)e.NewValue;
               if (e.NewValue.Equals(FilePanelType.Receive))
               {
-                  (s as SendFilePanel).StartListenFileReceive();
+                  (s as FilePanel).StartListenFileReceive();
               }
           })));
 
@@ -130,30 +150,49 @@ namespace FileTransporter.Panels
 
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.Sending = true;
-            foreach (var file in ViewModel.Files.Where(p => !p.Finished))
+            ViewModel.Working = true;
+
+            foreach (var file in ViewModel.Files.Where(p => p.Status == TransportFileStatus.Ready))
             {
-                if (Socket is ClientSocketHelper cs)
+                try
                 {
-                    await cs.SendFileAsync(file.File.FullName,
-                        p =>
-                        {
-                            file.UpdateProgress(p.CurrentLength);
-                            p.Cancel = ViewModel.Stopping;
-                        });
+                    file.Status = TransportFileStatus.Sending;
+                    if (Socket is ClientSocketHelper cs)
+                    {
+                        await cs.SendFileAsync(file.File.FullName, p => SendFileProgress(file, p));
+                    }
+                    else if (Socket is ServerSocketHelper ss)
+                    {
+                        await ss.SendFileAsync(Session, file.File.FullName, p => SendFileProgress(file, p));
+                    }
                 }
-                else if (Socket is ServerSocketHelper ss)
+                catch (OperationCanceledException ex)
                 {
-                    await ss.SendFileAsync(Session, file.File.FullName,
-                        p =>
-                        {
-                            file.UpdateProgress(p.CurrentLength);
-                            p.Cancel = ViewModel.Stopping;
-                        });
+                    await MainWindow.Current.ShowMessageAsync("传输被取消");
+                    file.Status = TransportFileStatus.Canceled;
+                }
+                catch (Exception ex)
+                {
+                    await MainWindow.Current.ShowMessageAsync("传输发生错误", ex);
+                    file.Status = TransportFileStatus.Error;
                 }
             }
-            ViewModel.Sending = false;
+
+            ViewModel.Working = false;
             ViewModel.Stopping = false;
+        }
+
+        private void SendFileProgress(TransportFile file, TransportProgress p)
+        {
+            if (ViewModel.Stopping)
+            {
+                p.Cancel = true;
+                file.Status = TransportFileStatus.Canceled;
+            }
+            else
+            {
+                file.UpdateProgress(p.CurrentLength);
+            }
         }
 
         private void BrowseButton_Click(object sender, RoutedEventArgs e)
@@ -167,27 +206,27 @@ namespace FileTransporter.Panels
             {
                 foreach (var file in dialog.FileNames)
                 {
-                    ViewModel.Files.Add(new TransporterFile(file));
+                    ViewModel.Files.Add(new TransportFile(file));
                 }
             }
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.Sending = false;
+            ViewModel.Working = false;
             ViewModel.Stopping = true;
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.Assert(!ViewModel.Sending);
-            var file = (sender as FrameworkElement).Tag as TransporterFile;
+            Debug.Assert(!ViewModel.Working);
+            var file = (sender as FrameworkElement).Tag as TransportFile;
             ViewModel.Files.Remove(file);
         }
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.Assert(!ViewModel.Sending);
+            Debug.Assert(!ViewModel.Working);
             ViewModel.Files.Clear();
         }
     }

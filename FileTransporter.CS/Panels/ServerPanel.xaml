@@ -11,44 +11,52 @@
     <UserControl.Resources>
         <converters:NotNull2BoolConverter x:Key="nn2bc" />
     </UserControl.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
 
-            <ComboBox
-                HorizontalAlignment="Stretch"
-                ItemsSource="{Binding Sessions}"
-                SelectedItem="{Binding SelectedSession}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding RemoteName}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Grid.Column="2" VerticalAlignment="Center">
-                <Run>共</Run>
-                <Run Text="{Binding Sessions.Count, Mode=OneWay}" />
-                <Run>个连接</Run>
-            </TextBlock>
-        </Grid>
-        <TabControl Grid.Row="2" Style="{StaticResource TabControlPivotStyle}">
-            <TabItem Header="文件发送">
-                <panels:SendFilePanel
-                    Margin="0,16,0,0"
+    <TabControl Grid.Row="2" Style="{StaticResource TabControlPivotStyle}">
+        <TabItem Header="文件发送">
+            <Grid Margin="0,16,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <ComboBox
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding Sessions}"
+                        SelectedItem="{Binding SelectedSession}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding RemoteName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center">
+                        <Run>共</Run>
+                        <Run Text="{Binding Sessions.Count, Mode=OneWay}" />
+                        <Run>个连接</Run>
+                    </TextBlock>
+                </Grid>
+                <panels:FilePanel
+                    Grid.Row="2"
                     IsEnabled="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Converter={StaticResource nn2bc}}"
                     Session="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                    Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" />
-            </TabItem>
-            <TabItem Header="文件浏览" />
-        </TabControl>
-    </Grid>
+                    Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                    Type="Send" />
+            </Grid>
+        </TabItem>
+        <TabItem Header="文件接收">
+            <panels:FilePanel
+                Grid.Row="2"
+                IsEnabled="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Converter={StaticResource nn2bc}}"
+                Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                Type="Receive" />
+        </TabItem>
+    </TabControl>
 </UserControl>

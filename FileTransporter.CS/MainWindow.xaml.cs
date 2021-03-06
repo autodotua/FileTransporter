@@ -11,9 +11,18 @@ namespace FileTransporter
     public partial class MainWindow : Window
     {
         public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
+        public static MainWindow Current { get; private set; }
+        public bool IsClient => ViewModel.Panel is ClientPanel;
+#if DEBUG
+        public bool IsServer = true;
+#else
+        public bool IsServer => ViewModel.Panel is ServerPanel;
+#endif
 
         public MainWindow(bool autoStart = false)
         {
+            Debug.Assert(Current == null);
+            Current = this;
             InitializeComponent();
             DataContext = ViewModel;
             ViewModel.Panel = new LoginPanel();
@@ -88,7 +97,7 @@ namespace FileTransporter
                 Dispatcher.Invoke(() =>
                 {
                     var panel = new ServerPanel(p.Result);
-                    var win = new Window();
+                    var win = new Window() { Padding = new Thickness(8), Left = 0, Width = 400 };
                     win.Content = panel;
                     win.Show();
                 });
@@ -107,10 +116,22 @@ namespace FileTransporter
         {
         }
 
+        private bool isDialogOpened = false;
+
         public async Task ShowMessageAsync(string message)
         {
             tbkDialogMessage.Text = message;
-            await dialog.ShowAsync();
+            if (!isDialogOpened)
+            {
+                isDialogOpened = true;
+                await dialog.ShowAsync();
+                isDialogOpened = false;
+            }
+        }
+
+        public async Task ShowMessageAsync(string message, Exception ex)
+        {
+            await ShowMessageAsync(message + Environment.NewLine + ex.Message);
         }
 
         private void MenuStartup_Click(object sender, RoutedEventArgs e)
