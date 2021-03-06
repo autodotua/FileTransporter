@@ -62,13 +62,19 @@ namespace FileTransporter.FileSimpleSocket
                 Log(LogLevel.Info, $"收到发送文件{data.Position}请求");
 
                 TransportProgress p = null;
-                if (data.End)
+                if (data.Type == FileRequestType.End)
                 {
                     p = new TransportProgress(file.Length, file.Length);
+                    progress?.Invoke(p);
                     Log(LogLevel.Info, "发送文件完成");
                     return;
                 }
-                p = new TransportProgress(data.Position, file.Length);
+                if (data.Type == FileRequestType.Cancel)
+                {
+                    Log(LogLevel.Info, "发送文件被取消");
+                    throw new Exception("发送文件被取消");
+                }
+                p = new TransportProgress(file.Length, data.Position);
                 progress?.Invoke(p);
                 if (p.Cancel)
                 {
@@ -95,13 +101,16 @@ namespace FileTransporter.FileSimpleSocket
             bool canceled = false;
             try
             {
+                TransportFileProgressEventArgs e = new TransportFileProgressEventArgs(session, file, 0);
+                TransportFileProgress?.Invoke(this, e);
+
                 for (long i = 0; i < bufferCount; i++)
                 {
                     FileBufferRequest request = new FileBufferRequest()
                     {
                         ID = file.ID,
                         Position = i * bufferLength,
-                        End = false,
+                        Type = FileRequestType.Next
                     };
 
                     SocketData data = new SocketData(Request, SocketDataAction.FileBufferRequest, request);
@@ -121,17 +130,31 @@ namespace FileTransporter.FileSimpleSocket
                             throw new Exception(resp.GetString());
 
                         case SocketDataAction.FileCanceledResponse:
-                            canceled = true;
                             throw new OperationCanceledException();
 
                         default:
                             Log(LogLevel.Warn, $"接收到未知指令：{resp.Action}，期望是{nameof(SocketDataAction.FileBufferResponse)}");
                             break;
                     }
+
+                    e = new TransportFileProgressEventArgs(session, file, i * bufferLength + resp.Get<FileBufferResponse>().Length);
+                    TransportFileProgress?.Invoke(this, e);
+                    if (e.Cancel)
+                    {
+                        session.Send(new SocketData(General,
+                         SocketDataAction.FileBufferRequest,
+                         new FileBufferRequest()
+                         {
+                             ID = file.ID,
+                             Type = FileRequestType.Cancel
+                         }));
+                        throw new OperationCanceledException();
+                    }
                 }
             }
             catch (OperationCanceledException ex)
             {
+                canceled = true;
             }
             catch (Exception ex)
             {
@@ -161,8 +184,25 @@ namespace FileTransporter.FileSimpleSocket
                 new FileBufferRequest()
                 {
                     ID = file.ID,
-                    End = true
+                    Type = FileRequestType.End
                 }));
         }
+
+        public event EventHandler<TransportFileProgressEventArgs> TransportFileProgress;
+    }
+
+    public class TransportFileProgressEventArgs : EventArgs
+    {
+        public TransportFileProgressEventArgs(SimpleSocketSession<SocketData> session, FileHead file, long length)
+        {
+            Session = session;
+            File = file;
+            Length = length;
+        }
+
+        public SimpleSocketSession<SocketData> Session { get; }
+        public FileHead File { get; }
+        public long Length { get; }
+        public bool Cancel { get; set; }
     }
 }

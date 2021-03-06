@@ -7,6 +7,13 @@ namespace FileTransporter.Model
     {
         public Guid ID { get; set; }
         public long Position { get; set; }
-        public bool End { get; set; }
+        public FileRequestType Type { get; set; } = FileRequestType.Next;
+    }
+
+    public enum FileRequestType
+    {
+        Next,
+        End,
+        Cancel
     }
 }

@@ -26,10 +26,11 @@ namespace FileTransporter
             {
             }
 
-            SimpleSocketUtility.NewLog += SimpleSocketUtility_NewLog;
+            SimpleSocketUtility.NewLog += App_NewLog;
+            App.NewLog += App_NewLog;
         }
 
-        private void SimpleSocketUtility_NewLog(object sender, LogEventArgs e)
+        private void App_NewLog(object sender, LogEventArgs e)
         {
 #if !DEBUG
             if (e.Level == LogLevel.Debug)
@@ -77,20 +78,28 @@ namespace FileTransporter
                 Dispatcher.Invoke(() =>
                 {
                     var panel = new ClientPanel(p.Result);
-                    //ViewModel.Panel = panel;
+                    ViewModel.Panel = panel;
                 });
             });
             (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync().ContinueWith(p =>
             {
                 Debug.Assert(!ok);
-#if !DEBUG
+#if DEBUG
+                Dispatcher.Invoke(() =>
+                {
+                    var panel = new ServerPanel(p.Result);
+                    var win = new Window();
+                    win.Content = panel;
+                    win.Show();
+                });
+#else
                 ok = true;
-#endif
                 Dispatcher.Invoke(() =>
                 {
                     var panel = new ServerPanel(p.Result);
                     ViewModel.Panel = panel;
                 });
+#endif
             });
         }
 

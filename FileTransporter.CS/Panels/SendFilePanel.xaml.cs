@@ -38,7 +38,14 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty SocketProperty = DependencyProperty.Register(
      nameof(Socket),
       typeof(SocketHelperBase),
-      typeof(SendFilePanel));
+      typeof(SendFilePanel),
+      new PropertyMetadata(null, new PropertyChangedCallback((s, e) =>
+      {
+          if ((s as SendFilePanel).Type == FilePanelType.Receive)
+          {
+              (s as SendFilePanel).StartListenFileReceive();
+          }
+      })));
 
         public SocketHelperBase Socket
         {
@@ -55,6 +62,70 @@ namespace FileTransporter.Panels
         {
             get => GetValue(SessionProperty) as SimpleSocketSession<SocketData>;
             set => SetValue(SessionProperty, value);
+        }
+
+        private bool isListenningFileReceive = false;
+
+        public void StartListenFileReceive()
+        {
+            if (isListenningFileReceive)
+            {
+                return;
+            }
+            if (Socket == null)
+            {
+                return;
+            }
+            isListenningFileReceive = true;
+            Socket.TransportFileProgress += Socket_TransportFileProgress;
+        }
+
+        private void Socket_TransportFileProgress(object sender, TransportFileProgressEventArgs e)
+        {
+            TransporterFile file = ViewModel.Files.FirstOrDefault(p => p.ID == e.File.ID);
+            if (file == null)
+            {
+                file = new TransporterFile()
+                {
+                    ID = e.File.ID,
+                    Length = e.File.Length,
+                    Name = e.File.Name,
+                    Path = e.File.Name,
+                    Time = DateTime.Now,
+                };
+                Dispatcher.Invoke(() =>
+                {
+                    ViewModel.Files.Add(file);
+                });
+            }
+            Dispatcher.Invoke(() =>
+            {
+                file.UpdateProgress(e.Length);
+            });
+            if (ViewModel.Stopping)
+            {
+                e.Cancel = true;
+            }
+        }
+
+        public static readonly DependencyProperty TypeProperty = DependencyProperty.Register(
+     nameof(Type),
+      typeof(FilePanelType),
+      typeof(SendFilePanel),
+      new PropertyMetadata(FilePanelType.Send
+          , new PropertyChangedCallback((s, e) =>
+          {
+              (s as SendFilePanel).ViewModel.Type = (FilePanelType)e.NewValue;
+              if (e.NewValue.Equals(FilePanelType.Receive))
+              {
+                  (s as SendFilePanel).StartListenFileReceive();
+              }
+          })));
+
+        public FilePanelType Type
+        {
+            get => (FilePanelType)GetValue(TypeProperty);
+            set => SetValue(TypeProperty, value);
         }
 
         private async void SendButton_Click(object sender, RoutedEventArgs e)
@@ -119,5 +190,11 @@ namespace FileTransporter.Panels
             Debug.Assert(!ViewModel.Sending);
             ViewModel.Files.Clear();
         }
+    }
+
+    public enum FilePanelType
+    {
+        Send,
+        Receive
     }
 }
