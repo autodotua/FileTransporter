@@ -14,7 +14,7 @@ namespace FileTransporter.Panels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private string path;
+        private string path = "";
 
         public string Path
         {
@@ -22,7 +22,7 @@ namespace FileTransporter.Panels
             set => this.SetValueAndNotify(ref path, value, nameof(Path), nameof(CanGotoParentDir));
         }
 
-        public bool CanGotoParentDir => Path == null ? false : Path.Where(p => p == '\\' || p == '/').Count() > 0;
+        public bool CanGotoParentDir => Path.Length > 0;
 
         public ObservableCollection<FileListInfo> Files { get; } = new ObservableCollection<FileListInfo>();
 

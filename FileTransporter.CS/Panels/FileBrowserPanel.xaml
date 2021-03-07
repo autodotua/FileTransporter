@@ -28,7 +28,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button
-                x:Name="btnUp" Click="Button_Click_1"
+                x:Name="btnUp" Click="UpButton_Click"
                 IsEnabled="{Binding CanGotoParentDir}"
                 ToolTip="上级">
                 <ui:SymbolIcon Symbol="Up" />
@@ -36,7 +36,7 @@
             <TextBox Grid.Column="2" Text="{Binding Path}" />
             <Button
                 x:Name="btnGoto" Grid.Column="4"
-                Click="Button_Click" ToolTip="转到">
+                Click="GotoButton_Click" ToolTip="转到">
                 <ui:SymbolIcon Symbol="Send" />
             </Button>
         </Grid>
@@ -116,13 +116,7 @@
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button
-                Grid.Column="2"
-                Click="DeleteButton_Click"
-                IsEnabled="{Binding SelectedFile, Converter={StaticResource nn2bc}}"
-                ToolTip="删除选中项">
-                <ui:SymbolIcon Symbol="Delete" />
-            </Button>
+
             <Button
                 Grid.Column="99"
                 Click="DownloadButton_Click"

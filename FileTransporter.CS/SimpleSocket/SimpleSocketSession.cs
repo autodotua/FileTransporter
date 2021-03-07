@@ -192,8 +192,9 @@ namespace FileTransporter.SimpleSocket
 
         private TaskCompletionSource<T> waitingTcs;
         public const int DefaultTimeOut = 2000;
+        private bool pauseEvent;
 
-        public Task<T> WaitForNextReceiveAsync(int timeout)
+        public Task<T> WaitForNextReceiveAsync(int timeout, bool pauseEvent = false)
         {
             if (waitingTcs != null)
             {
@@ -201,12 +202,14 @@ namespace FileTransporter.SimpleSocket
             }
             waitingTcs = new TaskCompletionSource<T>();
             var thisTcs = waitingTcs;
+            this.pauseEvent = pauseEvent;
             Task.Delay(timeout).ContinueWith(p =>
             {
                 if (waitingTcs != null && waitingTcs == thisTcs)
                 {
                     waitingTcs.SetException(new TimeoutException("等待回应超时"));
                     waitingTcs = null;
+                    this.pauseEvent = false;
                 }
             });
             return waitingTcs.Task;
@@ -266,6 +269,10 @@ namespace FileTransporter.SimpleSocket
             if (tcs != null)
             {
                 tcs.SetResult(message);
+                if (pauseEvent)
+                {
+                    return;
+                }
             }
             ReceivedData?.Invoke(this, new DataReceivedEventArgs<T>(this, message));
         }

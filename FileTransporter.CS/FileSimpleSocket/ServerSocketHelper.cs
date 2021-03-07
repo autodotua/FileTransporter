@@ -17,9 +17,9 @@ namespace FileTransporter.FileSimpleSocket
     {
         public SimpleSocketServer<SocketData> Server { get; private set; }
 
-        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<TransportProgress> progress = null)
+        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Guid? id)
         {
-            return base.SendFileAsync(session, path, progress);
+            return base.SendFileAsync(session, path, id);
         }
 
         public void Start(ushort port, string password)
@@ -46,15 +46,18 @@ namespace FileTransporter.FileSimpleSocket
         private void SendFileList(SimpleSocketSession<SocketData> session, FileListRequest request)
         {
             string path = request.Path;
+            List<RemoteFile> files = new List<RemoteFile>();
             if (string.IsNullOrEmpty(path))
             {
-                path = Directory.GetCurrentDirectory();
+                files = DriveInfo.GetDrives().Select(p => p.RootDirectory).Select(p => new RemoteFile(p, false)).ToList();
             }
-            List<RemoteFile> files = new List<RemoteFile>();
-            foreach (var dir in new DirectoryInfo(path).EnumerateFileSystemInfos())
+            else
             {
-                var file = new RemoteFile(dir, true);
-                files.Add(file);
+                foreach (var dir in new DirectoryInfo(path).EnumerateFileSystemInfos())
+                {
+                    var file = new RemoteFile(dir, true);
+                    files.Add(file);
+                }
             }
             var data = new FileListResponse() { Files = files.OrderByDescending(p => p.IsDir).ToList(), Path = path };
             SocketData resp = new SocketData(Response, SocketDataAction.FileListResponse, data);
@@ -64,23 +67,34 @@ namespace FileTransporter.FileSimpleSocket
         private async void Server_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
         {
             Log(LogLevel.Debug, "服务器接收到新数据，类型为" + e.Data.Action);
-            switch (e.Data.Action)
+            try
             {
-                case SocketDataAction.CheckRequest:
-                    VerifyPassword(e.Session);
-                    break;
+                switch (e.Data.Action)
+                {
+                    case SocketDataAction.CheckRequest:
+                        VerifyPassword(e.Session);
+                        break;
 
-                case SocketDataAction.FileSendRequest:
-                    await ReceiveFileAsync(e.Session, e.Data.Get<RemoteFile>());
-                    break;
+                    case SocketDataAction.FileSendRequest:
+                        await ReceiveFileAsync(e.Session, e.Data.Get<RemoteFile>());
+                        break;
 
-                case SocketDataAction.FileListRequest:
-                    SendFileList(e.Session, e.Data.Get<FileListRequest>());
-                    break;
+                    case SocketDataAction.FileListRequest:
+                        SendFileList(e.Session, e.Data.Get<FileListRequest>());
+                        break;
 
-                case SocketDataAction.FileDownloadRequest:
-                    await SendFileAsync(e.Session, e.Data.Get<FileDownloadRequest>().Path);
-                    break;
+                    case SocketDataAction.FileDownloadRequest:
+                        await SendFileAsync(e.Session, e.Data.Get<FileDownloadRequest>().Path, null);
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                App.Log(LogLevel.Warn, "处理请求操作被取消：" + e.Data.Action);
+            }
+            catch (Exception ex)
+            {
+                TrySendError(e.Session, ex);
             }
         }
 

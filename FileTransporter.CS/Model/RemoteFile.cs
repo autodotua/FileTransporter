@@ -39,7 +39,7 @@ namespace FileTransporter.Model
 
         public bool IsDir { get; private set; }
         public byte[] Icon { get; private set; }
-        public Guid ID { get; private set; }
+        public Guid ID { get; set; }
         public DateTime LastWriteTime { get; private set; }
         public long Length { get; private set; }
         public string Name { get; private set; }
@@ -55,7 +55,7 @@ namespace FileTransporter.Model
                 var image = new BitmapImage();
                 if (Icon == null || Icon.Length == 0)
                 {
-                    string path = $"Images/{(IsDir ? "folder" : "file")}.png";
+                    string path = $"Images/{(IsDir ? (Directory.GetParent(Path) == null ? "disk" : "folder") : "file")}.png";
                     using var fs = File.OpenRead(path);
                     LoadImageFromStream(image, fs);
                 }

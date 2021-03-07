@@ -34,7 +34,7 @@ namespace FileTransporter.Model
 
         private string from;
 
-        private Guid iD;
+        private Guid id=Guid.NewGuid();
 
         private long length;
 
@@ -81,8 +81,8 @@ namespace FileTransporter.Model
 
         public Guid ID
         {
-            get => iD;
-            set => this.SetValueAndNotify(ref iD, value, nameof(ID));
+            get => id;
+            set => this.SetValueAndNotify(ref id, value, nameof(ID));
         }
 
         public long Length
@@ -126,6 +126,8 @@ namespace FileTransporter.Model
             get => transportedLength;
             set => this.SetValueAndNotify(ref transportedLength, value, nameof(TransportedLength));
         }
+
+        public string FilePath { get; set; }
 
         public void UpdateProgress(long sendedByteCount)
         {

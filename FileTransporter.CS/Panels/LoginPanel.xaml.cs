@@ -40,12 +40,12 @@ namespace FileTransporter.Panels
             }
             catch (Exception ex)
             {
-                MessageBox.Show("连接失败：" + ex.Message);
+                await MainWindow.Current.ShowMessageAsync("连接失败：" + ex.Message);
                 (sender as Button).IsEnabled = true;
             }
         }
 
-        private void ServerButton_Click(object sender, RoutedEventArgs e)
+        private async void ServerButton_Click(object sender, RoutedEventArgs e)
         {
             (sender as Button).IsEnabled = false;
             try
@@ -56,7 +56,7 @@ namespace FileTransporter.Panels
             }
             catch (Exception ex)
             {
-                MessageBox.Show("启动失败：" + ex.Message);
+                await MainWindow.Current.ShowMessageAsync("启动失败：" + ex.Message);
                 (sender as Button).IsEnabled = true;
             }
         }

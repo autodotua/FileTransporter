@@ -8,6 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.modernwpf.com/2019"
     d:DesignHeight="450" d:DesignWidth="800"
+    Loaded="UserControl_Loaded"
     mc:Ignorable="d">
     <Grid x:Name="grd">
         <Grid.RowDefinitions>
@@ -63,7 +64,9 @@
                                 Grid.Column="2" Foreground="Green"
                                 Maximum="100"
                                 Value="{Binding Percent}" />
-                            <TextBlock Grid.Column="4" Text="{Binding From}" Opacity="0.75" />
+                            <TextBlock
+                                Grid.Column="4" Opacity="0.75"
+                                Text="{Binding From}" />
                             <TextBlock Grid.Column="6" Text="{Binding Status, Converter={StaticResource e2dc}}" />
                         </Grid>
                     </Grid>

@@ -13,7 +13,9 @@ namespace FileTransporter.FileSimpleSocket
 {
     public class SocketHelperBase : INotifyPropertyChanged
     {
-        public event EventHandler<TransportFileProgressEventArgs> TransportFileProgress;
+        public event EventHandler<TransportFileProgressEventArgs> UploadProgress;
+
+        public event EventHandler<TransportFileProgressEventArgs> DownloadProgress;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -24,7 +26,7 @@ namespace FileTransporter.FileSimpleSocket
         public bool IsUploading
         {
             get => isUploading;
-            private set
+            protected set
             {
                 isUploading = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsUploading)));
@@ -36,7 +38,7 @@ namespace FileTransporter.FileSimpleSocket
         public bool IsDownloading
         {
             get => isDownloading;
-            private set
+            protected set
             {
                 isDownloading = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDownloading)));
@@ -61,7 +63,7 @@ namespace FileTransporter.FileSimpleSocket
                 try
                 {
                     TransportFileProgressEventArgs e = new TransportFileProgressEventArgs(session, file, 0);
-                    TransportFileProgress?.Invoke(this, e);
+                    DownloadProgress?.Invoke(this, e);
 
                     for (long i = 0; i < bufferCount; i++)
                     {
@@ -97,7 +99,7 @@ namespace FileTransporter.FileSimpleSocket
                         }
 
                         e = new TransportFileProgressEventArgs(session, file, i * bufferLength + resp.Get<FileBufferResponse>().Length);
-                        TransportFileProgress?.Invoke(this, e);
+                        DownloadProgress?.Invoke(this, e);
                         if (e.Cancel)
                         {
                             session.Send(new SocketData(General,
@@ -129,7 +131,7 @@ namespace FileTransporter.FileSimpleSocket
                 {
                     File.Delete(tempFilePath);
                     var e = new TransportFileProgressEventArgs(session, file, -1) { Cancel = true };
-                    TransportFileProgress?.Invoke(this, e);
+                    DownloadProgress?.Invoke(this, e);
                 }
                 else
                 {
@@ -154,43 +156,48 @@ namespace FileTransporter.FileSimpleSocket
             }
         }
 
-        protected virtual async Task SendFileAsync(SimpleSocketSession<SocketData> session,
-            string path,
-            Action<TransportProgress> progress = null)
+        protected virtual async Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Guid? id)
         {
             IsUploading = true;
             try
             {
-                var file = SendFileHead(session, path);
+                RemoteFile file = SendFileHead(session, path);
+                if (id.HasValue)
+                {
+                    file.ID = id.Value;
+                }
+                using var fs = new FileStream(path, FileMode.Open);
                 while (true)
                 {
                     var request = await session.WaitForNextReceiveAsync(Config.Instance.FileTimeout);
                     var data = request.Get<FileBufferRequest>();
                     Log(LogLevel.Info, $"收到发送文件{data.Position}请求");
 
-                    TransportProgress p;
+                    TransportFileProgressEventArgs e;
                     if (data.Type == FileRequestType.End)
                     {
-                        p = new TransportProgress(file.Length, file.Length);
-                        progress?.Invoke(p);
+                        e = new TransportFileProgressEventArgs(session, file, file.Length);
+                        UploadProgress?.Invoke(this, e);
                         Log(LogLevel.Info, "发送文件完成");
                         return;
                     }
                     if (data.Type == FileRequestType.Cancel)
                     {
                         Log(LogLevel.Info, "发送文件被取消");
+                        e = new TransportFileProgressEventArgs(session, file, file.Length) { Cancel = true };
+                        UploadProgress?.Invoke(this, e);
                         throw new OperationCanceledException("发送文件被取消");
                     }
-                    p = new TransportProgress(file.Length, data.Position);
-                    progress?.Invoke(p);
-                    if (p.Cancel)
+                    e = new TransportFileProgressEventArgs(session, file, data.Position);
+                    UploadProgress?.Invoke(this, e);
+                    if (e.Cancel)
                     {
                         SocketData cancelData = new SocketData(Response, SocketDataAction.FileCanceledResponse, file);
                         session.Send(cancelData);
                         Log(LogLevel.Info, $"发送取消");
                         break;
                     }
-                    SendFileBuffer(session, path, data.Position, file.ID);
+                    SendFileBuffer(fs, session, path, data.Position, file.ID);
                 }
             }
             finally
@@ -199,10 +206,10 @@ namespace FileTransporter.FileSimpleSocket
             }
         }
 
-        private void SendFileBuffer(SimpleSocketSession<SocketData> session, string path, long position, Guid id)
+        private void SendFileBuffer(FileStream fs, SimpleSocketSession<SocketData> session, string path, long position, Guid id)
         {
             var bufferLength = Config.Instance.FileBufferLength;
-            using var fs = new FileStream(path, FileMode.Open);
+
             fs.Position = position;
             var array = new byte[bufferLength];
             int length = fs.Read(array, 0, bufferLength);
@@ -226,6 +233,23 @@ namespace FileTransporter.FileSimpleSocket
 
             Log(LogLevel.Info, "发送文件头");
             return head;
+        }
+
+        protected void TrySendError(SimpleSocketSession<SocketData> session, Exception ex)
+        {
+            try
+            {
+                App.Log(LogLevel.Error, "处理请求失败", ex);
+                session.Send(new SocketData()
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex2)
+            {
+                App.Log(LogLevel.Error, "发送错误信息失败", ex2);
+            }
         }
     }
 

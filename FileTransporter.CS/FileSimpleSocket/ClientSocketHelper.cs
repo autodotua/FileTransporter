@@ -41,20 +41,31 @@ namespace FileTransporter.FileSimpleSocket
             Started = true;
         }
 
-        private void Session_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
+        private async void Session_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
         {
-            switch (e.Data.Action)
-            {
-                case SocketDataAction.FileSendRequest:
-                    ReceiveFileAsync(e.Session, e.Data.Get<RemoteFile>());
-                    break;
-            }
             Log(LogLevel.Debug, "客户端接收到新数据，类型为" + e.Data.Action);
+            try
+            {
+                switch (e.Data.Action)
+                {
+                    case SocketDataAction.FileSendRequest:
+                        await ReceiveFileAsync(e.Session, e.Data.Get<RemoteFile>());
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                App.Log(LogLevel.Warn, "处理请求操作被取消：" + e.Data.Action);
+            }
+            catch (Exception ex)
+            {
+                TrySendError(e.Session, ex);
+            }
         }
 
-        public Task SendFileAsync(string path, Action<TransportProgress> progress = null)
+        public Task SendFileAsync(string path, Guid? id)
         {
-            return SendFileAsync(Client.Session, path, progress);
+            return SendFileAsync(Client.Session, path, id);
         }
 
         private async Task CheckAsync(string name)
@@ -76,11 +87,24 @@ namespace FileTransporter.FileSimpleSocket
 
         public async Task Download(string path)
         {
-            var data = new FileDownloadRequest() { Path = path };
-            var request = new SocketData(Request, SocketDataAction.FileDownloadRequest, data);
-            Client.Session.Send(request);
-            var resp = await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
-            await ReceiveFileAsync(Client.Session, resp.Get<RemoteFile>());
+            IsDownloading = true;
+            try
+            {
+                var data = new FileDownloadRequest() { Path = path };
+                var request = new SocketData(Request, SocketDataAction.FileDownloadRequest, data);
+                Client.Session.Send(request);
+                var resp = await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout, true);
+                await ReceiveFileAsync(Client.Session, resp.Get<RemoteFile>());
+            }
+            catch (Exception ex)
+            {
+                App.Log(LogLevel.Error, "下载文件失败", ex);
+                throw;
+            }
+            finally
+            {
+                IsDownloading = false;
+            }
         }
     }
 }

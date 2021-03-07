@@ -50,20 +50,32 @@ namespace FileTransporter.Panels
 
         public FileBrowserPanelViewModel ViewModel { get; } = new FileBrowserPanelViewModel();
 
-        private async void Button_Click(object sender, RoutedEventArgs e)
+        private async void GotoButton_Click(object sender, RoutedEventArgs e)
         {
-            await LoadFilesAsync(ViewModel.Path);
+            btnGoto.IsEnabled = false;
+            try
+            {
+                await LoadFilesAsync();
+            }
+            catch (Exception ex)
+            {
+                await MainWindow.Current.ShowMessageAsync("跳转失败", ex);
+            }
+            finally
+            {
+                btnGoto.IsEnabled = true;
+            }
         }
 
-        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        private async void UpButton_Click(object sender, RoutedEventArgs e)
         {
             await btnUp.PauseBindingAsync(IsEnabledProperty, async () =>
           {
               btnUp.IsEnabled = false;
               try
               {
-                  ViewModel.Path = Directory.GetParent(ViewModel.Path).FullName;
-                  await LoadFilesAsync(ViewModel.Path);
+                  ViewModel.Path = Directory.GetParent(ViewModel.Path)?.FullName ?? "";
+                  await LoadFilesAsync();
               }
               catch (Exception ex)
               {
@@ -76,18 +88,17 @@ namespace FileTransporter.Panels
           });
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
-        {
-        }
-
-        private void DeleteButton_Click(object sender, RoutedEventArgs e)
-        {
-        }
-
         private async void DownloadButton_Click(object sender, RoutedEventArgs e)
         {
             Debug.Assert(ViewModel.SelectedFile != null);
-            await Socket.Download(ViewModel.SelectedFile.Path);
+            try
+            {
+                await Socket.Download(ViewModel.SelectedFile.Path);
+            }
+            catch (Exception ex)
+            {
+                await MainWindow.Current.ShowMessageAsync("下载失败", ex);
+            }
         }
 
         private async void Grid_PreviewMouseDown(object sender, MouseButtonEventArgs e)
@@ -99,18 +110,25 @@ namespace FileTransporter.Panels
                     if (ViewModel.SelectedFile.IsDir)
                     {
                         ViewModel.Path = ViewModel.SelectedFile.Path;
-                        await LoadFilesAsync(ViewModel.Path);
+                        try
+                        {
+                            await LoadFilesAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            await MainWindow.Current.ShowMessageAsync("打开远程文件夹失败", ex);
+                        }
                     }
                 }
             }
         }
 
-        private async Task LoadFilesAsync(string path)
+        private async Task LoadFilesAsync()
         {
             ViewModel.Files.Clear();
             var config = new MapperConfiguration(cfg => cfg.CreateMap<RemoteFile, FileListInfo>());
             IMapper map = config.CreateMapper();
-            var files = await Socket.GetRemoteFileListAsync(path);
+            var files = await Socket.GetRemoteFileListAsync(ViewModel.Path);
             ViewModel.Path = files.Path;
             foreach (var file in files.Files)
             {
@@ -118,19 +136,18 @@ namespace FileTransporter.Panels
             }
         }
 
-        private void SendButton_Click(object sender, RoutedEventArgs e)
-        {
-        }
-
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-        }
-
         private async void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             if (ViewModel.Files.Count == 0)
             {
-                await LoadFilesAsync("");
+                try
+                {
+                    await LoadFilesAsync();
+                }
+                catch (Exception ex)
+                {
+                    await MainWindow.Current.ShowMessageAsync("加载远程文件失败", ex);
+                }
             }
         }
     }
