@@ -1,9 +1,14 @@
-﻿using FileTransporter.Model;
+﻿using FileTransporter.Dto;
+using FileTransporter.Model;
 using FileTransporter.SimpleSocket;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using static FileTransporter.Model.SocketDataType;
+using System.Windows.Documents;
+using static FileTransporter.Dto.SocketDataType;
 using static FileTransporter.SimpleSocket.SimpleSocketUtility;
 
 namespace FileTransporter.FileSimpleSocket
@@ -11,6 +16,11 @@ namespace FileTransporter.FileSimpleSocket
     public class ServerSocketHelper : SocketHelperBase
     {
         public SimpleSocketServer<SocketData> Server { get; private set; }
+
+        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<TransportProgress> progress = null)
+        {
+            return base.SendFileAsync(session, path, progress);
+        }
 
         public void Start(ushort port, string password)
         {
@@ -28,7 +38,30 @@ namespace FileTransporter.FileSimpleSocket
             Started = true;
         }
 
-        private void Server_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
+        private void Send(SimpleSocketSession<SocketData> session, SocketData data)
+        {
+            session.Send(data);
+        }
+
+        private void SendFileList(SimpleSocketSession<SocketData> session, FileListRequest request)
+        {
+            string path = request.Path;
+            if (string.IsNullOrEmpty(path))
+            {
+                path = Directory.GetCurrentDirectory();
+            }
+            List<RemoteFile> files = new List<RemoteFile>();
+            foreach (var dir in new DirectoryInfo(path).EnumerateFileSystemInfos())
+            {
+                var file = new RemoteFile(dir, true);
+                files.Add(file);
+            }
+            var data = new FileListResponse() { Files = files.OrderByDescending(p => p.IsDir).ToList(), Path = path };
+            SocketData resp = new SocketData(Response, SocketDataAction.FileListResponse, data);
+            Send(session, resp);
+        }
+
+        private async void Server_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
         {
             Log(LogLevel.Debug, "服务器接收到新数据，类型为" + e.Data.Action);
             switch (e.Data.Action)
@@ -38,7 +71,15 @@ namespace FileTransporter.FileSimpleSocket
                     break;
 
                 case SocketDataAction.FileSendRequest:
-                    ReceiveFile(e.Session, e.Data.Get<FileHead>());
+                    await ReceiveFileAsync(e.Session, e.Data.Get<RemoteFile>());
+                    break;
+
+                case SocketDataAction.FileListRequest:
+                    SendFileList(e.Session, e.Data.Get<FileListRequest>());
+                    break;
+
+                case SocketDataAction.FileDownloadRequest:
+                    await SendFileAsync(e.Session, e.Data.Get<FileDownloadRequest>().Path);
                     break;
             }
         }
@@ -47,16 +88,6 @@ namespace FileTransporter.FileSimpleSocket
         {
             var resp = new SocketData(Response, SocketDataAction.CheckResponse);
             Send(session, resp);
-        }
-
-        public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Action<TransportProgress> progress = null)
-        {
-            return base.SendFileAsync(session, path, progress);
-        }
-
-        private void Send(SimpleSocketSession<SocketData> session, SocketData data)
-        {
-            session.Send(data);
         }
     }
 }

@@ -1,9 +1,10 @@
-﻿using FileTransporter.Model;
+﻿using FileTransporter.Dto;
+using FileTransporter.Model;
 using FileTransporter.SimpleSocket;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using static FileTransporter.Model.SocketDataType;
+using static FileTransporter.Dto.SocketDataType;
 using static FileTransporter.SimpleSocket.SimpleSocketUtility;
 
 namespace FileTransporter.FileSimpleSocket
@@ -45,7 +46,7 @@ namespace FileTransporter.FileSimpleSocket
             switch (e.Data.Action)
             {
                 case SocketDataAction.FileSendRequest:
-                    ReceiveFile(e.Session, e.Data.Get<FileHead>());
+                    ReceiveFileAsync(e.Session, e.Data.Get<RemoteFile>());
                     break;
             }
             Log(LogLevel.Debug, "客户端接收到新数据，类型为" + e.Data.Action);
@@ -62,6 +63,24 @@ namespace FileTransporter.FileSimpleSocket
             data.Name = name;
             Client.Session.Send(data);
             await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
+        }
+
+        public async Task<FileListResponse> GetRemoteFileListAsync(string root)
+        {
+            var data = new FileListRequest() { Path = root };
+            var request = new SocketData(Request, SocketDataAction.FileListRequest, data);
+            Client.Session.Send(request);
+            var resp = await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
+            return resp.Get<FileListResponse>();
+        }
+
+        public async Task Download(string path)
+        {
+            var data = new FileDownloadRequest() { Path = path };
+            var request = new SocketData(Request, SocketDataAction.FileDownloadRequest, data);
+            Client.Session.Send(request);
+            var resp = await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout);
+            await ReceiveFileAsync(Client.Session, resp.Get<RemoteFile>());
         }
     }
 }

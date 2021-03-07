@@ -1,4 +1,5 @@
-﻿using FileTransporter.FileSimpleSocket;
+﻿using FileTransporter.Dto;
+using FileTransporter.FileSimpleSocket;
 using FileTransporter.Model;
 using FileTransporter.SimpleSocket;
 using FzLib.Extension;
@@ -7,10 +8,16 @@ using System.ComponentModel;
 
 namespace FileTransporter.Panels
 {
-    public class FilePanelViewModel : INotifyPropertyChanged
+    public class FileTransportPanelViewModel : INotifyPropertyChanged
     {
-        public ObservableCollection<TransportFile> Files { get; } = new ObservableCollection<TransportFile>();
         private TransportFile selectedFile;
+        private FilePanelType type;
+        private bool waiting;
+        private bool working;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public ObservableCollection<TransportFile> Files { get; } = new ObservableCollection<TransportFile>();
 
         public TransportFile SelectedFile
         {
@@ -18,7 +25,11 @@ namespace FileTransporter.Panels
             set => this.SetValueAndNotify(ref selectedFile, value, nameof(SelectedFile));
         }
 
-        private FilePanelType type;
+        public bool Stopping
+        {
+            get => waiting;
+            set => this.SetValueAndNotify(ref waiting, value, nameof(Stopping));
+        }
 
         public FilePanelType Type
         {
@@ -26,22 +37,10 @@ namespace FileTransporter.Panels
             set => this.SetValueAndNotify(ref type, value, nameof(Type));
         }
 
-        private bool working;
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
         public bool Working
         {
             get => working;
             set => this.SetValueAndNotify(ref working, value, nameof(Working));
-        }
-
-        private bool waiting;
-
-        public bool Stopping
-        {
-            get => waiting;
-            set => this.SetValueAndNotify(ref waiting, value, nameof(Stopping));
         }
     }
 }

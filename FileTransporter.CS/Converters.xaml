@@ -9,4 +9,5 @@
     <converters:Equal2VisiableConverter x:Key="e2vc" />
     <converters:FileLength2StringConverter x:Key="fl2sc" />
     <converters:Enum2DescriptionConverter x:Key="e2dc" />
+    <converters:Bool2VisibilityConverter x:Key="b2vc" />
 </ResourceDictionary>

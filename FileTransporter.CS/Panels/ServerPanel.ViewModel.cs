@@ -1,4 +1,5 @@
-﻿using FileTransporter.FileSimpleSocket;
+﻿using FileTransporter.Dto;
+using FileTransporter.FileSimpleSocket;
 using FileTransporter.Model;
 using FileTransporter.SimpleSocket;
 using FzLib.Extension;

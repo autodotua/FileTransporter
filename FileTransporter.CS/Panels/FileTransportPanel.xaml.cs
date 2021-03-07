@@ -1,4 +1,5 @@
-﻿using FileTransporter.FileSimpleSocket;
+﻿using FileTransporter.Dto;
+using FileTransporter.FileSimpleSocket;
 using FileTransporter.Model;
 using FileTransporter.SimpleSocket;
 using Microsoft.Win32;
@@ -20,11 +21,11 @@ using System.Windows.Shapes;
 
 namespace FileTransporter.Panels
 {
-    public partial class FilePanel : UserControl
+    public partial class FileTransportPanel : UserControl
     {
-        public FilePanelViewModel ViewModel { get; } = new FilePanelViewModel();
+        public FileTransportPanelViewModel ViewModel { get; } = new FileTransportPanelViewModel();
 
-        public FilePanel()
+        public FileTransportPanel()
         {
             InitializeComponent();
             DataContext = ViewModel;
@@ -38,12 +39,12 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty SocketProperty = DependencyProperty.Register(
      nameof(Socket),
       typeof(SocketHelperBase),
-      typeof(FilePanel),
+      typeof(FileTransportPanel),
       new PropertyMetadata(null, new PropertyChangedCallback((s, e) =>
       {
-          if ((s as FilePanel).Type == FilePanelType.Receive)
+          if ((s as FileTransportPanel).Type == FilePanelType.Receive)
           {
-              (s as FilePanel).StartListenFileReceive();
+              (s as FileTransportPanel).StartListenFileReceive();
           }
       })));
 
@@ -56,7 +57,7 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty SessionProperty = DependencyProperty.Register(
      nameof(Session),
       typeof(SimpleSocketSession<SocketData>),
-      typeof(FilePanel));
+      typeof(FileTransportPanel));
 
         public SimpleSocketSession<SocketData> Session
         {
@@ -100,7 +101,7 @@ namespace FileTransporter.Panels
                     ViewModel.Files.Add(file);
                 });
             }
-            if (e.Cancel)
+            if (e.Cancel)//远端取消
             {
                 ViewModel.Working = false;
                 ViewModel.Stopping = false;
@@ -111,14 +112,14 @@ namespace FileTransporter.Panels
             {
                 file.UpdateProgress(e.Length);
             });
-            if (ViewModel.Stopping)
+            if (ViewModel.Stopping)//本地请求停止
             {
                 file.Status = TransportFileStatus.Canceled;
                 e.Cancel = true;
                 ViewModel.Working = false;
                 ViewModel.Stopping = false;
             }
-            else if (file.Length == file.TransportedLength)
+            else if (file.Length == file.TransportedLength)//传输完成
             {
                 ViewModel.Working = false;
             }
@@ -131,14 +132,14 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty TypeProperty = DependencyProperty.Register(
      nameof(Type),
       typeof(FilePanelType),
-      typeof(FilePanel),
+      typeof(FileTransportPanel),
       new PropertyMetadata(FilePanelType.Send
           , new PropertyChangedCallback((s, e) =>
           {
-              (s as FilePanel).ViewModel.Type = (FilePanelType)e.NewValue;
+              (s as FileTransportPanel).ViewModel.Type = (FilePanelType)e.NewValue;
               if (e.NewValue.Equals(FilePanelType.Receive))
               {
-                  (s as FilePanel).StartListenFileReceive();
+                  (s as FileTransportPanel).StartListenFileReceive();
               }
           })));
 

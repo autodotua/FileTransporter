@@ -43,7 +43,7 @@
                         <Run>个连接</Run>
                     </TextBlock>
                 </Grid>
-                <panels:FilePanel
+                <panels:FileTransportPanel
                     Grid.Row="2"
                     IsEnabled="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Converter={StaticResource nn2bc}}"
                     Session="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
@@ -52,7 +52,7 @@
             </Grid>
         </TabItem>
         <TabItem Header="文件接收">
-            <panels:FilePanel
+            <panels:FileTransportPanel
                 Grid.Row="2"
                 IsEnabled="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Converter={StaticResource nn2bc}}"
                 Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
