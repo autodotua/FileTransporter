@@ -77,22 +77,38 @@ namespace FileTransporter
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            bool ok = false;
+            WaitForServerOrClientOpen();
+        }
+
+        private void WaitForServerOrClientOpen()
+        {
             (ViewModel.Panel as LoginPanel).WaitForClientOpenedAsync().ContinueWith(p =>
             {
-                Debug.Assert(!ok);
 #if !DEBUG
                 ok = true;
 #endif
                 Dispatcher.Invoke(() =>
                 {
                     var panel = new ClientPanel(p.Result);
+                    panel.SocketDisconnect += (p1, p2) =>
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            var disPanel = new SessionDisconnectPanel();
+                            ViewModel.Panel = disPanel;
+                            disPanel.ReturnToLoginPanel += (p3, p4) =>
+                            {
+                                ViewModel.Panel = new LoginPanel();
+                                WaitForServerOrClientOpen();
+                            };
+                        });
+                    };
                     ViewModel.Panel = panel;
                 });
             });
+
             (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync().ContinueWith(p =>
             {
-                Debug.Assert(!ok);
 #if DEBUG
                 Dispatcher.Invoke(() =>
                 {
@@ -100,6 +116,10 @@ namespace FileTransporter
                     var win = new Window() { Padding = new Thickness(8), Left = 0, Width = 400 };
                     win.Content = panel;
                     win.Show();
+                    win.Closed += (p1, p2) =>
+                    {
+                        p.Result.Server.Close();
+                    };
                 });
 #else
                 ok = true;

@@ -58,12 +58,15 @@ namespace FileTransporter.SimpleSocket
                       }
                   };
                 session.Initialize(clientSkt);
+                socket.BeginAccept(new AsyncCallback(NewClientConnected), socket);
+            }
+            catch (ObjectDisposedException)
+            {
             }
             catch (Exception e)
             {
                 SimpleSocketUtility.Log(LogLevel.Error, e.Message);
             }
-            socket.BeginAccept(new AsyncCallback(NewClientConnected), socket);
         }
 
         private void Session_ReceivedData(object sender, DataReceivedEventArgs<K> e)
@@ -79,6 +82,10 @@ namespace FileTransporter.SimpleSocket
         {
             if (socket != null)
             {
+                foreach (var session in sessions.ToArray())
+                {
+                    session.Stop();
+                }
                 socket.Close();
             }
         }
