@@ -7,14 +7,24 @@ namespace FileTransporter.Panels
 {
     public partial class ServerPanel : SocketPanelBase
     {
-        public ServerPanelViewModel ViewModel { get; set; }
-
         public ServerPanel(ServerSocketHelper socket)
         {
             Socket = socket;
             ViewModel = new ServerPanelViewModel(socket);
             DataContext = ViewModel;
             InitializeComponent();
+        }
+
+        public ServerPanelViewModel ViewModel { get; set; }
+
+        private void FileTransportPanel_ReceiveStarted(object sender, System.EventArgs e)
+        {
+            tab.SelectedIndex = 1;
+        }
+
+        private void FileTransportPanel_SendStarted(object sender, System.EventArgs e)
+        {
+            tab.SelectedIndex = 0;
         }
     }
 }

@@ -7,7 +7,7 @@
     xmlns:panels="clr-namespace:FileTransporter.Panels"
     x:Name="root" d:DesignHeight="450"
     d:DesignWidth="800" mc:Ignorable="d">
-    <TabControl Style="{StaticResource TabControlPivotStyle}">
+    <TabControl Style="{StaticResource TabControlPivotStyle}" x:Name="tab">
         <TabItem Header="文件发送">
             <panels:FileTransportPanel
                 Margin="0,16,0,0"
@@ -16,12 +16,12 @@
         </TabItem>
         <TabItem Header="文件接收">
             <panels:FileTransportPanel
-                Margin="0,16,0,0"
+                Margin="0,16,0,0"  ReceiveStarted="FileTransportPanel_ReceiveStarted"
                 Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                 Type="Receive" />
         </TabItem>
         <TabItem Header="文件浏览">
-            <panels:FileBrowserPanel Margin="0,16,0,0" Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" />
+            <panels:FileBrowserPanel Margin="0,16,0,0" DownloadStarted="FileBrowserPanel_DownloadStarted" Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" />
         </TabItem>
     </TabControl>
 </panels:SocketPanelBase>

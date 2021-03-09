@@ -92,7 +92,9 @@ namespace FileTransporter.FileSimpleSocket
                 var request = new SocketData(Request, SocketDataAction.FileDownloadRequest, data);
                 Client.Session.Send(request);
                 var resp = await Client.Session.WaitForNextReceiveAsync(Config.Instance.CommandTimeout, true);
-                await ReceiveFileAsync(Client.Session, resp.Get<RemoteFile>());
+                var file = resp.Get<RemoteFile>();
+                TransportFileProgressEventArgs e = new TransportFileProgressEventArgs(Client.Session, file, 0);
+                await ReceiveFileAsync(Client.Session, file);
             }
             catch (Exception ex)
             {

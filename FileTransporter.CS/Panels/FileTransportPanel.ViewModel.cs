@@ -10,6 +10,7 @@ namespace FileTransporter.Panels
 {
     public class FileTransportPanelViewModel : INotifyPropertyChanged
     {
+        private ObservableCollection<TransportFile> files = new ObservableCollection<TransportFile>();
         private TransportFile selectedFile;
         private FilePanelType type;
         private bool waiting;
@@ -17,7 +18,11 @@ namespace FileTransporter.Panels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public ObservableCollection<TransportFile> Files { get; } = new ObservableCollection<TransportFile>();
+        public ObservableCollection<TransportFile> Files
+        {
+            get => files;
+            set => this.SetValueAndNotify(ref files, value, nameof(Files));
+        }
 
         public TransportFile SelectedFile
         {

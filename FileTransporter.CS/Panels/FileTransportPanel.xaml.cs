@@ -5,6 +5,7 @@ using FileTransporter.SimpleSocket;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -32,14 +33,30 @@ namespace FileTransporter.Panels
         public static readonly DependencyProperty SessionProperty = DependencyProperty.Register(
      nameof(Session),
       typeof(SimpleSocketSession<SocketData>),
-      typeof(FileTransportPanel));
+      typeof(FileTransportPanel),
+      new PropertyMetadata(null, new PropertyChangedCallback((obj, e) =>
+      {
+          var panel = obj as FileTransportPanel;
+          var session = e.NewValue as SimpleSocketSession<SocketData>;
+          if (session == null)
+          {
+              panel.ViewModel.Files = null;
+          }
+          else if (panel.sessionFiles.ContainsKey(session))
+          {
+              panel.ViewModel.Files = panel.sessionFiles[session];
+          }
+          else
+          {
+              panel.ViewModel.Files = new ObservableCollection<TransportFile>();
+              panel.sessionFiles.Add(session, panel.ViewModel.Files);
+          }
+      })));
 
-        //public SocketHelperBase Socket { get; set; }
-        //public SimpleSocketSession<SocketData> Session { get; set; }
         public static readonly DependencyProperty SocketProperty = DependencyProperty.Register(
-     nameof(Socket),
-      typeof(SocketHelperBase),
-      typeof(FileTransportPanel));
+      nameof(Socket),
+       typeof(SocketHelperBase),
+       typeof(FileTransportPanel));
 
         public static readonly DependencyProperty TypeProperty = DependencyProperty.Register(
      nameof(Type),
@@ -53,15 +70,17 @@ namespace FileTransporter.Panels
 
         private bool isListenningFileReceive = false;
         private bool isListenningFileSend = false;
+        private Dictionary<SimpleSocketSession<SocketData>, ObservableCollection<TransportFile>> sessionFiles = new Dictionary<SimpleSocketSession<SocketData>, ObservableCollection<TransportFile>>();
 
         public FileTransportPanel()
         {
             InitializeComponent();
             DataContext = ViewModel;
-#if DEBUG
-            //ViewModel.Files.Add(new TransporterFile(@"C:\Users\autod\Desktop\Road Rash 2002.zip"));
-#endif
         }
+
+        public event EventHandler ReceiveStarted;
+
+        public event EventHandler SendStarted;
 
         public SimpleSocketSession<SocketData> Session
         {
@@ -182,6 +201,14 @@ namespace FileTransporter.Panels
                         From = MainWindow.Current.IsServer ? e.Session.RemoteName : ""
                     };
                     ViewModel.Files.Add(file);
+                    if (ViewModel.Type == FilePanelType.Receive)
+                    {
+                        ReceiveStarted(this, new EventArgs());
+                    }
+                    else
+                    {
+                        SendStarted(this, new EventArgs());
+                    }
                 });
             }
             if (e.Cancel)//远端取消

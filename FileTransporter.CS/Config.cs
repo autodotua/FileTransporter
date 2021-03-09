@@ -1,4 +1,5 @@
-﻿using FzLib.DataStorage.Serialization;
+﻿using FileTransporter.Panels;
+using FzLib.DataStorage.Serialization;
 
 namespace FileTransporter
 {
@@ -34,5 +35,7 @@ namespace FileTransporter
         public int FileTimeout { get; set; } = 1000 * 60;
 
         public string FileReceiveFolder { get; set; } = "files";
+
+        public LoginInfo Login { get; set; }
     }
 }

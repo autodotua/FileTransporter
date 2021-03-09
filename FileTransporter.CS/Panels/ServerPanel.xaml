@@ -12,7 +12,9 @@
         <converters:NotNull2BoolConverter x:Key="nn2bc" />
     </UserControl.Resources>
 
-    <TabControl Grid.Row="2" Style="{StaticResource TabControlPivotStyle}">
+    <TabControl
+        x:Name="tab" Grid.Row="2"
+        Style="{StaticResource TabControlPivotStyle}">
         <TabItem Header="文件发送">
             <Grid Margin="0,16,0,0">
                 <Grid.RowDefinitions>
@@ -46,6 +48,7 @@
                 <panels:FileTransportPanel
                     Grid.Row="2"
                     IsEnabled="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Converter={StaticResource nn2bc}}"
+                    SendStarted="FileTransportPanel_SendStarted"
                     Session="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                     Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                     Type="Send" />
@@ -55,6 +58,7 @@
             <panels:FileTransportPanel
                 Grid.Row="2"
                 IsEnabled="{Binding DataContext.SelectedSession, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Converter={StaticResource nn2bc}}"
+                ReceiveStarted="FileTransportPanel_ReceiveStarted"
                 Socket="{Binding DataContext.Socket, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                 Type="Receive" />
         </TabItem>

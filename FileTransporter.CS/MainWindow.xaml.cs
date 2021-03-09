@@ -54,29 +54,29 @@ namespace FileTransporter
         public async Task ShowMessageAsync(string message, DialogIconType icon, string detail = null)
         {
             tbkDialogMessage.Text = message;
-            iconMsg.Glyph = new string(new char[] { (char)icon });
+            smbDialogIcon.Glyph = new string(new char[] { (char)icon });
             switch (icon)
             {
                 case DialogIconType.Info:
-                    iconMsg.Foreground = Foreground;
+                    smbDialogIcon.Foreground = Foreground;
                     break;
 
                 case DialogIconType.Error:
-                    iconMsg.Foreground = Brushes.Red;
+                    smbDialogIcon.Foreground = Brushes.Red;
                     break;
 
                 case DialogIconType.Warning:
-                    iconMsg.Foreground = new SolidColorBrush(Color.FromArgb(0xff, 0xff, 0xd7, 0x66));
+                    smbDialogIcon.Foreground = new SolidColorBrush(Color.FromArgb(0xff, 0xff, 0xd7, 0x66));
                     break;
             }
             if (detail != null)
             {
-                exp.Visibility = Visibility.Visible;
+                expDialogDetail.Visibility = Visibility.Visible;
                 tbkDialogDetail.Text = detail;
             }
             else
             {
-                exp.Visibility = Visibility.Collapsed;
+                expDialogDetail.Visibility = Visibility.Collapsed;
             }
             if (!isDialogOpened)
             {
@@ -118,7 +118,7 @@ namespace FileTransporter
 
                 if (ViewModel.Logs.Count > 0)
                 {
-                    lbxLogs.ScrollIntoView(ViewModel.Logs[^1]);
+                    lvwLogs.ScrollIntoView(ViewModel.Logs[^1]);
                     while (ViewModel.Logs.Count > ViewModel.MaxLogCount)
                     {
                         ViewModel.Logs.RemoveAt(0);

@@ -7,14 +7,14 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.modernwpf.com/2019"
     x:Name="Window" Title="文件运输机"
-    Width="1000" Height="800"
+    Width="400" Height="800"
     ui:TitleBar.ButtonStyle="{DynamicResource AppTitleBarButtonStyle}"
     ui:TitleBar.ExtendViewIntoTitleBar="True"
     ui:TitleBar.Style="{DynamicResource AppTitleBarStyle}"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     Loaded="Window_Loaded"
-    WindowStartupLocation="CenterScreen"
+    WindowStartupLocation="Manual"
     mc:Ignorable="d">
     <Window.Resources>
 
@@ -72,64 +72,70 @@
             </Grid>
         </Border>
         <Grid Grid.Row="99">
-
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <ContentControl Margin="8" Content="{Binding Panel}" />
-            <GridSplitter
-                Grid.Column="1" Width="8"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Stretch"
-                Background="Transparent" />
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <ListBox
-                    x:Name="lbxLogs"
-                    Background="Transparent"
-                    DockPanel.Dock="Right"
-                    ItemsSource="{Binding Logs}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <ui:SimpleStackPanel Orientation="Vertical" Spacing="4">
-                                <TextBlock
-                                    Opacity="0.75"
-                                    Text="{Binding Time, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
-                                    TextWrapping="NoWrap" />
-                                <TextBlock
-                                    Foreground="{Binding TypeBrush}"
-                                    Text="{Binding Content}"
-                                    TextWrapping="Wrap" />
-                            </ui:SimpleStackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <ui:SimpleStackPanel
-                    Grid.Row="2" Margin="8"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal" Spacing="12">
-                    <TextBlock VerticalAlignment="Center">最大日志数：</TextBlock>
-                    <ComboBox
-                        Width="120" IsEditable="True"
-                        Text="{Binding MaxLogCount}">
-                        <ComboBoxItem>1000</ComboBoxItem>
-                        <ComboBoxItem>10000</ComboBoxItem>
-                        <ComboBoxItem>50000</ComboBoxItem>
-                    </ComboBox>
-                    <TextBlock VerticalAlignment="Center">
-                        <Run>共有</Run>
-                        <Run Text="{Binding Logs.Count, Mode=OneWay}" />
-                        <Run>条日志，</Run>
-                        <Hyperlink Click="Hyperlink_Click">点击清空</Hyperlink>
-                    </TextBlock>
-                </ui:SimpleStackPanel>
-            </Grid>
+
+            <Expander
+                Grid.Row="2"
+                Padding="4,0,4,8" Header="日志">
+                <Grid MaxHeight="360">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ListView
+                        x:Name="lvwLogs"
+                        ItemsSource="{Binding Logs}"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Width="72" Header="时间">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock
+                                                Foreground="{Binding TypeBrush}"
+                                                Text="{Binding Time, StringFormat={}{0:HH:mm:ss}}"
+                                                ToolTip="{Binding Time, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="1200" Header="内容">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Foreground="{Binding TypeBrush}" Text="{Binding Content}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <ui:SimpleStackPanel
+                        Grid.Row="2" Margin="8"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal" Spacing="12">
+                        <TextBlock VerticalAlignment="Center">最大日志数：</TextBlock>
+                        <ComboBox
+                            Width="96" IsEditable="True"
+                            Text="{Binding MaxLogCount}">
+                            <ComboBoxItem>1000</ComboBoxItem>
+                            <ComboBoxItem>10000</ComboBoxItem>
+                            <ComboBoxItem>50000</ComboBoxItem>
+                        </ComboBox>
+                        <TextBlock VerticalAlignment="Center">
+                            <Run>共</Run>
+                            <Run Text="{Binding Logs.Count, Mode=OneWay}" />
+                            <Run>条日志，</Run>
+                            <Hyperlink Click="Hyperlink_Click">点击清空</Hyperlink>
+                        </TextBlock>
+                    </ui:SimpleStackPanel>
+                </Grid>
+            </Expander>
 
             <ui:ContentDialog
                 x:Name="dialog" Title="注意"
@@ -151,10 +157,10 @@
                         VerticalAlignment="Center"
                         TextWrapping="Wrap" />
                     <ui:FontIcon
-                        x:Name="iconMsg" Grid.Column="2"
+                        x:Name="smbDialogIcon" Grid.Column="2"
                         VerticalAlignment="Center" FontSize="32" />
                     <Expander
-                        x:Name="exp" Grid.Row="2"
+                        x:Name="expDialogDetail" Grid.Row="2"
                         Grid.ColumnSpan="99" Header="详情">
                         <ScrollViewer MaxHeight="320">
                             <TextBlock

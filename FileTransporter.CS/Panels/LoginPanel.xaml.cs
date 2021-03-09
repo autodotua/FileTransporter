@@ -8,30 +8,37 @@ namespace FileTransporter.Panels
 {
     public partial class LoginPanel : UserControl
     {
-        public LoginPanelViewModel ViewModel { get; } = new LoginPanelViewModel();
+        private TaskCompletionSource<ClientSocketHelper> tcsClient = new TaskCompletionSource<ClientSocketHelper>();
+        private TaskCompletionSource<ServerSocketHelper> tcsServer = new TaskCompletionSource<ServerSocketHelper>();
 
         public LoginPanel()
         {
+            if (Config.Instance.Login == null)
+            {
+                Config.Instance.Login = new LoginInfo();
+            }
+            ViewModel = Config.Instance.Login;
+
             InitializeComponent();
             DataContext = ViewModel;
         }
 
-        private TaskCompletionSource<ServerSocketHelper> tcsServer = new TaskCompletionSource<ServerSocketHelper>();
-        private TaskCompletionSource<ClientSocketHelper> tcsClient = new TaskCompletionSource<ClientSocketHelper>();
-
-        public Task<ServerSocketHelper> WaitForServerOpenedAsync()
-        {
-            return tcsServer.Task;
-        }
+        public LoginInfo ViewModel { get; }
 
         public Task<ClientSocketHelper> WaitForClientOpenedAsync()
         {
             return tcsClient.Task;
         }
 
+        public Task<ServerSocketHelper> WaitForServerOpenedAsync()
+        {
+            return tcsServer.Task;
+        }
+
         private async void ClientButton_Click(object sender, RoutedEventArgs e)
         {
             (sender as Button).IsEnabled = false;
+            Config.Instance.Save();
             try
             {
                 ClientSocketHelper helper = new ClientSocketHelper();
@@ -48,6 +55,7 @@ namespace FileTransporter.Panels
         private async void ServerButton_Click(object sender, RoutedEventArgs e)
         {
             (sender as Button).IsEnabled = false;
+            Config.Instance.Save();
             try
             {
                 ServerSocketHelper helper = new ServerSocketHelper();

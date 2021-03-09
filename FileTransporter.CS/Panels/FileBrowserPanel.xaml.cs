@@ -42,6 +42,8 @@ namespace FileTransporter.Panels
             InitializeComponent();
         }
 
+        public event EventHandler DownloadStarted;
+
         public ClientSocketHelper Socket
         {
             get => GetValue(SocketProperty) as ClientSocketHelper;
@@ -49,6 +51,20 @@ namespace FileTransporter.Panels
         }
 
         public FileBrowserPanelViewModel ViewModel { get; } = new FileBrowserPanelViewModel();
+
+        private async void DownloadButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.Assert(ViewModel.SelectedFile != null);
+            try
+            {
+                DownloadStarted?.Invoke(this, new EventArgs());
+                await Socket.Download(ViewModel.SelectedFile.Path);
+            }
+            catch (Exception ex)
+            {
+                await MainWindow.Current.ShowMessageAsync("下载失败", ex);
+            }
+        }
 
         private async void GotoButton_Click(object sender, RoutedEventArgs e)
         {
@@ -64,40 +80,6 @@ namespace FileTransporter.Panels
             finally
             {
                 btnGoto.IsEnabled = true;
-            }
-        }
-
-        private async void UpButton_Click(object sender, RoutedEventArgs e)
-        {
-            await btnUp.PauseBindingAsync(IsEnabledProperty, async () =>
-          {
-              btnUp.IsEnabled = false;
-              try
-              {
-                  ViewModel.Path = Directory.GetParent(ViewModel.Path)?.FullName ?? "";
-                  await LoadFilesAsync();
-              }
-              catch (Exception ex)
-              {
-                  await MainWindow.Current.ShowMessageAsync("返回上级失败", ex);
-              }
-              finally
-              {
-                  btnUp.IsEnabled = true;
-              }
-          });
-        }
-
-        private async void DownloadButton_Click(object sender, RoutedEventArgs e)
-        {
-            Debug.Assert(ViewModel.SelectedFile != null);
-            try
-            {
-                await Socket.Download(ViewModel.SelectedFile.Path);
-            }
-            catch (Exception ex)
-            {
-                await MainWindow.Current.ShowMessageAsync("下载失败", ex);
             }
         }
 
@@ -134,6 +116,27 @@ namespace FileTransporter.Panels
             {
                 ViewModel.Files.Add(map.Map<FileListInfo>(file));
             }
+        }
+
+        private async void UpButton_Click(object sender, RoutedEventArgs e)
+        {
+            await btnUp.PauseBindingAsync(IsEnabledProperty, async () =>
+          {
+              btnUp.IsEnabled = false;
+              try
+              {
+                  ViewModel.Path = Directory.GetParent(ViewModel.Path)?.FullName ?? "";
+                  await LoadFilesAsync();
+              }
+              catch (Exception ex)
+              {
+                  await MainWindow.Current.ShowMessageAsync("返回上级失败", ex);
+              }
+              finally
+              {
+                  btnUp.IsEnabled = true;
+              }
+          });
         }
 
         private async void UserControl_Loaded(object sender, RoutedEventArgs e)

@@ -8,8 +8,6 @@ namespace FileTransporter.Panels
 {
     public partial class ClientPanel : SocketPanelBase
     {
-        public ClientPanelViewModel ViewModel { get; set; }
-
         public ClientPanel(ClientSocketHelper socket)
         {
             Socket = socket;
@@ -19,11 +17,23 @@ namespace FileTransporter.Panels
             InitializeComponent();
         }
 
+        public event EventHandler SocketClosed;
+
+        public ClientPanelViewModel ViewModel { get; set; }
+
+        private void FileBrowserPanel_DownloadStarted(object sender, EventArgs e)
+        {
+            tab.SelectedIndex = 1;
+        }
+
+        private void FileTransportPanel_ReceiveStarted(object sender, EventArgs e)
+        {
+            tab.SelectedIndex = 1;
+        }
+
         private void Socket_Closed(object sender, EventArgs e)
         {
             SocketClosed?.Invoke(sender, e);
         }
-
-        public event EventHandler SocketClosed;
     }
 }
