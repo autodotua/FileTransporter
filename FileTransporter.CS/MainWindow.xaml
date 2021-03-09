@@ -136,12 +136,33 @@
                 Grid.ColumnSpan="999"
                 CloseButtonText="确定">
                 <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
+                        <RowDefinition Height="8" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock x:Name="tbkDialogMessage" TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="tbkDialogMessage" MaxWidth="320"
+                        VerticalAlignment="Center"
+                        TextWrapping="Wrap" />
+                    <ui:FontIcon
+                        x:Name="iconMsg" Grid.Column="2"
+                        VerticalAlignment="Center" FontSize="32" />
+                    <Expander
+                        x:Name="exp" Grid.Row="2"
+                        Grid.ColumnSpan="99" Header="详情">
+                        <ScrollViewer MaxHeight="320">
+                            <TextBlock
+                                x:Name="tbkDialogDetail" MaxWidth="320"
+                                VerticalAlignment="Center"
+                                TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Expander>
                 </Grid>
             </ui:ContentDialog>
         </Grid>

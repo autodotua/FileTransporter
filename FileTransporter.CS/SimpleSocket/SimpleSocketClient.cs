@@ -35,6 +35,10 @@ namespace FileTransporter.SimpleSocket
                          Session = new T();
                          Session.Password = password;
                          Session.Initialize(socket);
+                         Session.Disconnected += (p1, p2) =>
+                         {
+                             Close();
+                         };
                          SimpleSocketUtility.Log(LogLevel.Info, "客户端连接服务器成功");
                          tcs.SetResult();
                      }
@@ -84,6 +88,8 @@ namespace FileTransporter.SimpleSocket
             if (socket != null)
             {
                 socket.Close();
+                socket = null;
+                OnClosed();
             }
         }
     }

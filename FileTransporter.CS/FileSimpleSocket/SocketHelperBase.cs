@@ -11,17 +11,27 @@ using static FileTransporter.SimpleSocket.SimpleSocketUtility;
 
 namespace FileTransporter.FileSimpleSocket
 {
-    public class SocketHelperBase : INotifyPropertyChanged
+    public abstract class SocketHelperBase : INotifyPropertyChanged
     {
-        public event EventHandler<TransportFileProgressEventArgs> UploadProgress;
+        private bool isDownloading;
+
+        private bool isUploading;
 
         public event EventHandler<TransportFileProgressEventArgs> DownloadProgress;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public bool Closed { get; protected set; }
-        public bool Started { get; protected set; }
-        private bool isUploading;
+        public event EventHandler<TransportFileProgressEventArgs> UploadProgress;
+
+        public bool IsDownloading
+        {
+            get => isDownloading;
+            protected set
+            {
+                isDownloading = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDownloading)));
+            }
+        }
 
         public bool IsUploading
         {
@@ -33,17 +43,9 @@ namespace FileTransporter.FileSimpleSocket
             }
         }
 
-        private bool isDownloading;
+        public bool Running { get; protected set; } = false;
 
-        public bool IsDownloading
-        {
-            get => isDownloading;
-            protected set
-            {
-                isDownloading = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDownloading)));
-            }
-        }
+        public abstract void Close();
 
         protected async Task ReceiveFileAsync(SimpleSocketSession<SocketData> session, RemoteFile file)
         {
@@ -206,6 +208,23 @@ namespace FileTransporter.FileSimpleSocket
             }
         }
 
+        protected void TrySendError(SimpleSocketSession<SocketData> session, Exception ex)
+        {
+            try
+            {
+                App.Log(LogLevel.Error, "处理请求失败", ex);
+                session.Send(new SocketData()
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex2)
+            {
+                App.Log(LogLevel.Error, "发送错误信息失败", ex2);
+            }
+        }
+
         private void SendFileBuffer(FileStream fs, SimpleSocketSession<SocketData> session, string path, long position, Guid id)
         {
             var bufferLength = Config.Instance.FileBufferLength;
@@ -233,23 +252,6 @@ namespace FileTransporter.FileSimpleSocket
 
             Log(LogLevel.Info, "发送文件头");
             return head;
-        }
-
-        protected void TrySendError(SimpleSocketSession<SocketData> session, Exception ex)
-        {
-            try
-            {
-                App.Log(LogLevel.Error, "处理请求失败", ex);
-                session.Send(new SocketData()
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
-            }
-            catch (Exception ex2)
-            {
-                App.Log(LogLevel.Error, "发送错误信息失败", ex2);
-            }
         }
     }
 

@@ -15,8 +15,7 @@ namespace FileTransporter.FileSimpleSocket
 
         public async Task StartAsync(string address, ushort port, string password, string name)
         {
-            Debug.Assert(!Started);
-            Debug.Assert(!Closed);
+            Debug.Assert(!Running);
             Debug.Assert(port > 0);
             Debug.Assert(address != null);
 
@@ -34,11 +33,10 @@ namespace FileTransporter.FileSimpleSocket
             catch
             {
                 Client.Close();
-                Closed = true;
                 throw;
             }
             Client.Session.ReceivedData += Session_ReceivedData;
-            Started = true;
+            Running = true;
         }
 
         private async void Session_ReceivedData(object sender, DataReceivedEventArgs<SocketData> e)
@@ -105,6 +103,11 @@ namespace FileTransporter.FileSimpleSocket
             {
                 IsDownloading = false;
             }
+        }
+
+        public override void Close()
+        {
+            Client.Close();
         }
     }
 }

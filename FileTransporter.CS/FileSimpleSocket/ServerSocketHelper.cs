@@ -17,6 +17,12 @@ namespace FileTransporter.FileSimpleSocket
     {
         public SimpleSocketServer<SocketData> Server { get; private set; }
 
+        public override void Close()
+        {
+            Server.Close();
+            Running = false;
+        }
+
         public new Task SendFileAsync(SimpleSocketSession<SocketData> session, string path, Guid? id)
         {
             return base.SendFileAsync(session, path, id);
@@ -24,8 +30,7 @@ namespace FileTransporter.FileSimpleSocket
 
         public void Start(ushort port, string password)
         {
-            Debug.Assert(!Started);
-            Debug.Assert(!Closed);
+            Debug.Assert(!Running);
             Debug.Assert(port > 0);
             Server = new SimpleSocketServer<SocketData>();
             if (!string.IsNullOrEmpty(password))
@@ -35,7 +40,7 @@ namespace FileTransporter.FileSimpleSocket
             Server.SetPassword(password);
             Server.Start("0.0.0.0", port);
             Server.ReceivedData += Server_ReceivedData;
-            Started = true;
+            Running = true;
         }
 
         private void Send(SimpleSocketSession<SocketData> session, SocketData data)

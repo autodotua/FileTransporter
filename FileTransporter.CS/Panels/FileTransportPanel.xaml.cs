@@ -150,7 +150,7 @@ namespace FileTransporter.Panels
                 }
                 catch (OperationCanceledException ex)
                 {
-                    await MainWindow.Current.ShowMessageAsync("传输被取消");
+                    await MainWindow.Current.ShowMessageAsync("传输被取消", DialogIconType.Warning);
                     file.Status = TransportFileStatus.Canceled;
                 }
                 catch (Exception ex)

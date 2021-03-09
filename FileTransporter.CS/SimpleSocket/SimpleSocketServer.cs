@@ -87,6 +87,7 @@ namespace FileTransporter.SimpleSocket
                     session.Stop();
                 }
                 socket.Close();
+                OnClosed();
             }
         }
     }

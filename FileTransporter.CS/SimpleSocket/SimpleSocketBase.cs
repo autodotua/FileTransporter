@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using System.Text;
 
 namespace FileTransporter.SimpleSocket
@@ -7,14 +8,16 @@ namespace FileTransporter.SimpleSocket
         where T : SimpleSocketSession<K>, new()
         where K : SimpleSocketDataBase, new()
     {
-        protected Socket socket = null;
         public string password;
+        protected Socket socket = null;
+
+        public event EventHandler Closed;
 
         public abstract void Close();
 
         public void SetPassword(string pswd)
         {
-            if(string.IsNullOrEmpty(pswd))
+            if (string.IsNullOrEmpty(pswd))
             {
                 return;
             }
@@ -28,6 +31,11 @@ namespace FileTransporter.SimpleSocket
                 sb.Append(hashBytes[i].ToString("X2"));
             }
             password = sb.ToString();
+        }
+
+        protected void OnClosed()
+        {
+            Closed?.Invoke(this, new EventArgs());
         }
     }
 }

@@ -13,17 +13,17 @@ namespace FileTransporter.Panels
         public ClientPanel(ClientSocketHelper socket)
         {
             Socket = socket;
-            socket.Client.Session.Disconnected += Session_Disconnected;
+            socket.Client.Closed += Socket_Closed;
             ViewModel = new ClientPanelViewModel(socket);
             DataContext = ViewModel;
             InitializeComponent();
         }
 
-        private void Session_Disconnected(object sender, EventArgs e)
+        private void Socket_Closed(object sender, EventArgs e)
         {
-            SocketDisconnect?.Invoke(sender, e);
+            SocketClosed?.Invoke(sender, e);
         }
 
-        public event EventHandler SocketDisconnect;
+        public event EventHandler SocketClosed;
     }
 }

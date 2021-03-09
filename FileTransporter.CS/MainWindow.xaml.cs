@@ -8,16 +8,23 @@ using System.Windows.Media;
 
 namespace FileTransporter
 {
+    public enum DialogIconType
+    {
+        Info = 0xE946,
+        Error = 0xE783,
+        Warning = 0xE7BA
+    }
+
+    public class Log
+    {
+        public string Content { get; set; }
+        public DateTime Time { get; set; }
+        public Brush TypeBrush { get; set; }
+    }
+
     public partial class MainWindow : Window
     {
-        public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
-        public static MainWindow Current { get; private set; }
-        public bool IsClient => ViewModel.Panel is ClientPanel;
-#if DEBUG
-        public bool IsServer = true;
-#else
-        public bool IsServer => ViewModel.Panel is ServerPanel;
-#endif
+        private bool isDialogOpened = false;
 
         public MainWindow(bool autoStart = false)
         {
@@ -37,6 +44,51 @@ namespace FileTransporter
 
             SimpleSocketUtility.NewLog += App_NewLog;
             App.NewLog += App_NewLog;
+        }
+
+        public static MainWindow Current { get; private set; }
+        public bool IsClient => ViewModel.Panel is ClientPanel;
+        public bool IsServer => ViewModel.Panel is ServerPanel;
+        public MainWindowViewModel ViewModel { get; } = new MainWindowViewModel();
+
+        public async Task ShowMessageAsync(string message, DialogIconType icon, string detail = null)
+        {
+            tbkDialogMessage.Text = message;
+            iconMsg.Glyph = new string(new char[] { (char)icon });
+            switch (icon)
+            {
+                case DialogIconType.Info:
+                    iconMsg.Foreground = Foreground;
+                    break;
+
+                case DialogIconType.Error:
+                    iconMsg.Foreground = Brushes.Red;
+                    break;
+
+                case DialogIconType.Warning:
+                    iconMsg.Foreground = new SolidColorBrush(Color.FromArgb(0xff, 0xff, 0xd7, 0x66));
+                    break;
+            }
+            if (detail != null)
+            {
+                exp.Visibility = Visibility.Visible;
+                tbkDialogDetail.Text = detail;
+            }
+            else
+            {
+                exp.Visibility = Visibility.Collapsed;
+            }
+            if (!isDialogOpened)
+            {
+                isDialogOpened = true;
+                await dialog.ShowAsync();
+                isDialogOpened = false;
+            }
+        }
+
+        public async Task ShowMessageAsync(string message, Exception ex)
+        {
+            await ShowMessageAsync(message + Environment.NewLine + ex.Message, DialogIconType.Error, ex.ToString());
         }
 
         private void App_NewLog(object sender, LogEventArgs e)
@@ -75,83 +127,9 @@ namespace FileTransporter
             });
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
-            WaitForServerOrClientOpen();
-        }
-
-        private void WaitForServerOrClientOpen()
-        {
-            (ViewModel.Panel as LoginPanel).WaitForClientOpenedAsync().ContinueWith(p =>
-            {
-#if !DEBUG
-                ok = true;
-#endif
-                Dispatcher.Invoke(() =>
-                {
-                    var panel = new ClientPanel(p.Result);
-                    panel.SocketDisconnect += (p1, p2) =>
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            var disPanel = new SessionDisconnectPanel();
-                            ViewModel.Panel = disPanel;
-                            disPanel.ReturnToLoginPanel += (p3, p4) =>
-                            {
-                                ViewModel.Panel = new LoginPanel();
-                                WaitForServerOrClientOpen();
-                            };
-                        });
-                    };
-                    ViewModel.Panel = panel;
-                });
-            });
-
-            (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync().ContinueWith(p =>
-            {
-#if DEBUG
-                Dispatcher.Invoke(() =>
-                {
-                    var panel = new ServerPanel(p.Result);
-                    var win = new Window() { Padding = new Thickness(8), Left = 0, Width = 400 };
-                    win.Content = panel;
-                    win.Show();
-                    win.Closed += (p1, p2) =>
-                    {
-                        p.Result.Server.Close();
-                    };
-                });
-#else
-                ok = true;
-                Dispatcher.Invoke(() =>
-                {
-                    var panel = new ServerPanel(p.Result);
-                    ViewModel.Panel = panel;
-                });
-#endif
-            });
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-        }
-
-        private bool isDialogOpened = false;
-
-        public async Task ShowMessageAsync(string message)
-        {
-            tbkDialogMessage.Text = message;
-            if (!isDialogOpened)
-            {
-                isDialogOpened = true;
-                await dialog.ShowAsync();
-                isDialogOpened = false;
-            }
-        }
-
-        public async Task ShowMessageAsync(string message, Exception ex)
-        {
-            await ShowMessageAsync(message + Environment.NewLine + ex.Message);
+            ViewModel.Logs.Clear();
         }
 
         private void MenuStartup_Click(object sender, RoutedEventArgs e)
@@ -174,16 +152,85 @@ namespace FileTransporter
             Visibility = Visibility.Collapsed;
         }
 
-        private void Hyperlink_Click(object sender, RoutedEventArgs e)
+        private void WaitForServerOrClientOpen()
         {
-            ViewModel.Logs.Clear();
-        }
-    }
+            (ViewModel.Panel as LoginPanel).WaitForClientOpenedAsync().ContinueWith(p =>
+            {
+#if DEBUG
+                Dispatcher.Invoke(() =>
+                {
+                    var panel = new ClientPanel(p.Result);
+                    var win = new Window() { Padding = new Thickness(8), Left = 1200, Width = 400 };
+                    win.Content = panel;
+                    win.Show();
+                    panel.SocketClosed += (p1, p2) =>
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            var disPanel = new SessionDisconnectPanel();
+                            ViewModel.Panel = disPanel;
+                            disPanel.ReturnToLoginPanel += (p3, p4) =>
+                            {
+                                ViewModel.Panel = new LoginPanel();
+                                WaitForServerOrClientOpen();
+                            };
+                        });
+                    };
+                });
+#else
+                Dispatcher.Invoke(() =>
+                {
+                    var panel = new ClientPanel(p.Result);
+                    panel.SocketClosed += (p1, p2) =>
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            var disPanel = new SessionDisconnectPanel();
+                            ViewModel.Panel = disPanel;
+                            disPanel.ReturnToLoginPanel += (p3, p4) =>
+                            {
+                                ViewModel.Panel = new LoginPanel();
+                                WaitForServerOrClientOpen();
+                            };
+                        });
+                    };
+                    ViewModel.Panel = panel;
+                });
 
-    public class Log
-    {
-        public DateTime Time { get; set; }
-        public string Content { get; set; }
-        public Brush TypeBrush { get; set; }
+#endif
+            });
+
+            (ViewModel.Panel as LoginPanel).WaitForServerOpenedAsync().ContinueWith(p =>
+            {
+#if DEBUG
+                Dispatcher.Invoke(() =>
+                {
+                    var panel = new ServerPanel(p.Result);
+                    var win = new Window() { Padding = new Thickness(8), Left = 0, Width = 400 };
+                    win.Content = panel;
+                    win.Show();
+                    win.Closed += (p1, p2) =>
+                    {
+                        p.Result.Server.Close();
+                    };
+                });
+#else
+                Dispatcher.Invoke(() =>
+                {
+                    var panel = new ServerPanel(p.Result);
+                    ViewModel.Panel = panel;
+                });
+#endif
+            });
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            WaitForServerOrClientOpen();
+        }
     }
 }
